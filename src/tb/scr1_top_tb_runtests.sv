@@ -29,28 +29,28 @@ initial begin
 end
 
 // Debug message - dinesh A
-// logic [`SCR1_DMEM_AWIDTH-1:0]           core2imem_addr_o_r;           // DMEM address
-// logic [`SCR1_DMEM_AWIDTH-1:0]           core2dmem_addr_o_r;           // DMEM address
-// logic                                   core2dmem_cmd_o_r;
-// 
-// `define RISC_CORE  i_top.i_core_top
-// 
-// always@(posedge `RISC_CORE.clk) begin
-//     if(`RISC_CORE.imem2core_req_ack_i && `RISC_CORE.core2imem_req_o)
-//           core2imem_addr_o_r <= `RISC_CORE.core2imem_addr_o;
-// 
-//     if(`RISC_CORE.dmem2core_req_ack_i && `RISC_CORE.core2dmem_req_o) begin
-//           core2dmem_addr_o_r <= `RISC_CORE.core2dmem_addr_o;
-//           core2dmem_cmd_o_r  <= `RISC_CORE.core2dmem_cmd_o;
-//     end
-// 
-//     if(`RISC_CORE.imem2core_resp_i !=0)
-//           $display("RISCV-DEBUG => IMEM ADDRESS: %x Read Data : %x Resonse: %x", core2imem_addr_o_r,`RISC_CORE.imem2core_rdata_i,`RISC_CORE.imem2core_resp_i);
-//     if((`RISC_CORE.dmem2core_resp_i !=0) && core2dmem_cmd_o_r)
-//           $display("RISCV-DEBUG => DMEM ADDRESS: %x Write Data: %x Resonse: %x", core2dmem_addr_o_r,`RISC_CORE.core2dmem_wdata_o,`RISC_CORE.dmem2core_resp_i);
-//     if((`RISC_CORE.dmem2core_resp_i !=0) && !core2dmem_cmd_o_r)
-//           $display("RISCV-DEBUG => DMEM ADDRESS: %x READ Data : %x Resonse: %x", core2dmem_addr_o_r,`RISC_CORE.dmem2core_rdata_i,`RISC_CORE.dmem2core_resp_i);
-// end
+ logic [`SCR1_DMEM_AWIDTH-1:0]           core2imem_addr_o_r;           // DMEM address
+ logic [`SCR1_DMEM_AWIDTH-1:0]           core2dmem_addr_o_r;           // DMEM address
+ logic                                   core2dmem_cmd_o_r;
+ 
+ `define RISC_CORE  i_top.i_core_top
+ 
+ always@(posedge `RISC_CORE.clk) begin
+     if(`RISC_CORE.imem2core_req_ack_i && `RISC_CORE.core2imem_req_o)
+           core2imem_addr_o_r <= `RISC_CORE.core2imem_addr_o;
+ 
+     if(`RISC_CORE.dmem2core_req_ack_i && `RISC_CORE.core2dmem_req_o) begin
+           core2dmem_addr_o_r <= `RISC_CORE.core2dmem_addr_o;
+           core2dmem_cmd_o_r  <= `RISC_CORE.core2dmem_cmd_o;
+     end
+ 
+     if(`RISC_CORE.imem2core_resp_i !=0)
+           $display("RISCV-DEBUG => IMEM ADDRESS: %x Read Data : %x Resonse: %x", core2imem_addr_o_r,`RISC_CORE.imem2core_rdata_i,`RISC_CORE.imem2core_resp_i);
+     if((`RISC_CORE.dmem2core_resp_i !=0) && core2dmem_cmd_o_r)
+           $display("RISCV-DEBUG => DMEM ADDRESS: %x Write Data: %x Resonse: %x", core2dmem_addr_o_r,`RISC_CORE.core2dmem_wdata_o,`RISC_CORE.dmem2core_resp_i);
+     if((`RISC_CORE.dmem2core_resp_i !=0) && !core2dmem_cmd_o_r)
+           $display("RISCV-DEBUG => DMEM ADDRESS: %x READ Data : %x Resonse: %x", core2dmem_addr_o_r,`RISC_CORE.dmem2core_rdata_i,`RISC_CORE.dmem2core_resp_i);
+ end
 
 
 
