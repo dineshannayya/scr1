@@ -7,7 +7,11 @@
 `include "scr1_ipic.svh"
 
 module scr1_memory_tb_axi #(
-    parameter SIZE   = 1*1024*1024,
+`ifdef SCR1_TCM_EN
+    parameter SIZE   = 1*1024*1024, 
+`else
+    parameter SIZE   = 8*1024*1024, // Memory sized increased for non TCM Mode
+`endif
     parameter N_IF   = 2,
     parameter W_ID   = 4,
     parameter W_ADR  = 32,

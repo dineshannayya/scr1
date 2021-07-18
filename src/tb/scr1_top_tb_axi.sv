@@ -506,4 +506,12 @@ scr1_memory_tb_axi #(
     .rresp          ( {io_axi_imem_rresp,  io_axi_dmem_rresp}     )
 );
 
+`ifdef WFDUMP
+initial
+begin
+   $dumpfile("simx.vcd");
+   $dumpvars(0,scr1_top_tb_axi);
+end
+`endif
+
 endmodule : scr1_top_tb_axi

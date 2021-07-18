@@ -1,0 +1,19 @@
+## First Time Make sure that you have updated the subdirectory using below command
+git submodule update --init --recursive 
+
+
+#. To run Single Test with  verilator in AXI mode
+     make run_verilator CFG=MAX BUS=AXI TRACE=0 TARGETS="hello"
+#. To run Single Test with  modelsim in AXI mode
+     make run_modelsim CFG=MAX BUS=AXI TRACE=0 TARGETS="hello"
+#. To run Single Test with  verilator with waveform in AXI mode
+     make run_verilator_wf CFG=MAX BUS=AXI TRACE=0 TARGETS="hello"
+# vcd waveform dump in
+    ./build/verilator_wf_AXI_MAX_imc_IPIC_1_TCM_1_VIRQ_1_TRACE_0/simx.vcd
+# to open waveform viewer
+    gtkwave
+# To run all the test in modelsim
+  make run_modelsim CFG=MAX BUS=AXI TRACE=0
+
+#Sign Off Regression
+make run_verilator CFG=MAX BUS=AXI TARGETS="riscv_isa hello dhrystone21 coremark riscv_compliance" TRACE=1

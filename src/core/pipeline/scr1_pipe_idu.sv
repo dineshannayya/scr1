@@ -1,4 +1,20 @@
-/// Copyright by Syntacore LLC © 2016-2020. See LICENSE for details
+//////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_pipe_idu.sv>
 /// @brief      Instruction Decoder Unit (IDU)
 ///
@@ -57,8 +73,8 @@ localparam [SCR1_GPR_FIELD_WIDTH-1:0] SCR1_MPRF_SP_ADDR     = 5'd2;
 //-------------------------------------------------------------------------------
 
 logic [`SCR1_IMEM_DWIDTH-1:0]       instr;
-type_scr1_instr_type_e              instr_type;
-type_scr1_rvi_opcode_e              rvi_opcode;
+logic [1:0]                         instr_type;
+logic [6:2]                         rvi_opcode;
 logic                               rvi_illegal;
 logic [2:0]                         funct3;
 logic [6:0]                         funct7;
@@ -80,10 +96,10 @@ assign idu2exu_req_o  = ifu2idu_vd_i;
 assign instr          = ifu2idu_instr_i;
 
 // RVI / RVC
-assign instr_type   = type_scr1_instr_type_e'(instr[1:0]);
+assign instr_type   = instr[1:0];
 
 // RVI / RVC fields
-assign rvi_opcode   = type_scr1_rvi_opcode_e'(instr[6:2]);                          // RVI
+assign rvi_opcode   = instr[6:2];                          // RVI
 assign funct3       = (instr_type == SCR1_INSTR_RVI) ? instr[14:12] : instr[15:13]; // RVI / RVC
 assign funct7       = instr[31:25];                                                 // RVI
 assign funct12      = instr[31:20];                                                 // RVI (SYSTEM)

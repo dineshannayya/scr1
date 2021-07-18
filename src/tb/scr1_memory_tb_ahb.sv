@@ -8,7 +8,11 @@
 `include "scr1_ipic.svh"
 
 module scr1_memory_tb_ahb #(
+`ifdef SCR1_TCM_EN
     parameter SCR1_MEM_POWER_SIZE  = 16
+`else
+    parameter SCR1_MEM_POWER_SIZE  = 23 // Memory sized increased for non TCM Mode
+`endif
 )
 (
     // Control

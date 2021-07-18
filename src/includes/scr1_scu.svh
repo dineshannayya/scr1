@@ -1,4 +1,20 @@
-/// Copyright by Syntacore LLC © 2016-2021. See LICENSE for details
+//////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_scu.svh>
 /// @brief      SCU header file
 ///
@@ -16,6 +32,7 @@
 localparam int unsigned         SCR1_SCU_DR_SYSCTRL_OP_WIDTH        = 2;
 localparam int unsigned         SCR1_SCU_DR_SYSCTRL_ADDR_WIDTH      = 2;
 localparam int unsigned         SCR1_SCU_DR_SYSCTRL_DATA_WIDTH      = 4;
+localparam int unsigned         SCR1_SCU_DR_SYSCTRL_WIDTH      = SCR1_SCU_DR_SYSCTRL_OP_WIDTH+SCR1_SCU_DR_SYSCTRL_ADDR_WIDTH+SCR1_SCU_DR_SYSCTRL_DATA_WIDTH; // cp.3
 
 //==============================================================================
 // Types
@@ -73,6 +90,7 @@ typedef struct packed {
     logic                                           dm_rst_bhv;
 } type_scr1_scu_sysctrl_mode_reg_s;
 
+localparam bit [31:0]    SCR1_SCU_SYSCTRL_STATUS_REG_WIDTH        = 4; // cp.3
 typedef struct packed {
     logic                                           hdu_reset;
     logic                                           dm_reset;

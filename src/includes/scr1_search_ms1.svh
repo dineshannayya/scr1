@@ -1,4 +1,20 @@
-/// Copyright by Syntacore LLC © 2016-2020. See LICENSE for details
+//////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_search_ms1.svh>
 /// @brief      Most significant one search function
 ///
@@ -9,12 +25,12 @@
 //-------------------------------------------------------------------------------
 // Local types declaration
 //-------------------------------------------------------------------------------
-typedef struct {
+typedef struct packed {
     logic       vd;
     logic       idx;
 } type_scr1_search_one_2_s;
 
-typedef struct {
+typedef struct packed {
     logic           vd;
     logic [4:0]     idx;
 } type_scr1_search_one_32_s;
@@ -29,9 +45,9 @@ function automatic type_scr1_search_one_2_s scr1_lead_zeros_cnt_2(
 begin
     tmp.vd  = |din;
     tmp.idx = ~din[1];
-    return  tmp;
+    scr1_lead_zeros_cnt_2 =  tmp;
 end
-endfunction : scr1_lead_zeros_cnt_2
+endfunction
 
 function automatic logic [4:0] scr1_lead_zeros_cnt_32(
     input   logic [31:0]    din
@@ -48,9 +64,10 @@ begin
     logic [3:0]     stage4_idx [1:0];
     type_scr1_search_one_32_s tmp;
     logic [4:0]     res;
+    integer         i;
 
     // Stage 1
-    for (int unsigned i=0; i<16; ++i) begin
+    for (i=0; i<16; i=i+1) begin // cp.4
         type_scr1_search_one_2_s tmp;
         tmp = scr1_lead_zeros_cnt_2(din[(i+1)*2-1-:2]);
         stage1_vd[i]  = tmp.vd;
@@ -58,7 +75,7 @@ begin
     end
 
     // Stage 2
-    for (int unsigned i=0; i<8; ++i) begin
+    for (i=0; i<8;i=i+1) begin // cp.4
         type_scr1_search_one_2_s tmp;
         tmp = scr1_lead_zeros_cnt_2(stage1_vd[(i+1)*2-1-:2]);
         stage2_vd[i]  = tmp.vd;
@@ -66,7 +83,7 @@ begin
     end
 
     // Stage 3
-    for (int unsigned i=0; i<4; ++i) begin
+    for (i=0; i<4; i=i+1) begin // cp.4
         type_scr1_search_one_2_s tmp;
         tmp = scr1_lead_zeros_cnt_2(stage2_vd[(i+1)*2-1-:2]);
         stage3_vd[i]  = tmp.vd;
@@ -74,7 +91,7 @@ begin
     end
 
     // Stage 4
-    for (int unsigned i=0; i<2; ++i) begin
+    for (i=0; i<2; i=i+1) begin // cp.4
         type_scr1_search_one_2_s tmp;
         tmp = scr1_lead_zeros_cnt_2(stage3_vd[(i+1)*2-1-:2]);
         stage4_vd[i]  = tmp.vd;
@@ -87,8 +104,8 @@ begin
 
     res = tmp.idx;
 
-    return res;
+    scr1_lead_zeros_cnt_32 = res;
 end
-endfunction : scr1_lead_zeros_cnt_32
+endfunction 
 
 `endif // SCR1_SEARCH_MS1_SVH

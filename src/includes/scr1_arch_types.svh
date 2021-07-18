@@ -1,4 +1,20 @@
-/// Copyright by Syntacore LLC © 2016-2021. See LICENSE for details
+//////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_arch_types.svh>
 /// @brief      Pipeline types description file
 ///
@@ -20,8 +36,9 @@
   `define SCR1_MPRF_SIZE      32
 `endif // SCR1_RVE_EXT
 
-typedef logic [`SCR1_XLEN-1:0]  type_scr1_mprf_v;
-typedef logic [`SCR1_XLEN-1:0]  type_scr1_pc_v;
+// Masked due to iverilog issue
+//typedef logic [`SCR1_XLEN-1:0]  type_scr1_mprf_v;
+//typedef logic [`SCR1_XLEN-1:0]  type_scr1_pc_v;
 
 parameter int unsigned  SCR1_CSR_ADDR_WIDTH             = 12;
 parameter int unsigned  SCR1_CSR_MTVEC_BASE_ZERO_BITS   = 6;
@@ -70,3 +87,4 @@ typedef enum logic [1:0] {
 } type_scr1_op_width_e;
 
 `endif //SCR1_ARCH_TYPES_SVH
+

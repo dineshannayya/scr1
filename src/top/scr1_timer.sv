@@ -1,4 +1,20 @@
-/// Copyright by Syntacore LLC © 2016-2020. See LICENSE for details
+//////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_timer.sv>
 /// @brief      Memory-mapped Timer
 ///
@@ -14,13 +30,13 @@ module scr1_timer (
 
     // Memory interface
     input   logic                                   dmem_req,
-    input   type_scr1_mem_cmd_e                     dmem_cmd,
-    input   type_scr1_mem_width_e                   dmem_width,
+    input   logic                                   dmem_cmd,
+    input   logic [1:0]                             dmem_width,
     input   logic [`SCR1_DMEM_AWIDTH-1:0]           dmem_addr,
     input   logic [`SCR1_DMEM_DWIDTH-1:0]           dmem_wdata,
     output  logic                                   dmem_req_ack,
     output  logic [`SCR1_DMEM_DWIDTH-1:0]           dmem_rdata,
-    output  type_scr1_mem_resp_e                    dmem_resp,
+    output  logic [1:0]                             dmem_resp,
 
     // Timer interface
     output  logic [63:0]                            timer_val,

@@ -1,4 +1,20 @@
-/// Copyright by Syntacore LLC © 2016-2020. See LICENSE for details
+//////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_pipe_exu.sv>
 /// @brief      Execution Unit (EXU)
 ///
@@ -94,7 +110,7 @@ module scr1_pipe_exu (
     output  logic                               exu2csr_take_exc_o,         // Take exception trap
     output  logic                               exu2csr_mret_update_o,      // MRET update CSR
     output  logic                               exu2csr_mret_instr_o,       // MRET instruction
-    output  type_scr1_exc_code_e                exu2csr_exc_code_o,         // Exception code (see scr1_arch_types.svh)
+    output  logic [SCR1_EXC_CODE_WIDTH_E-1:0]   exu2csr_exc_code_o,         // Exception code (see scr1_arch_types.svh) - cp.7
     output  logic [`SCR1_XLEN-1:0]              exu2csr_trap_val_o,         // Trap value
     input   logic [`SCR1_XLEN-1:0]              csr2exu_new_pc_i,           // Exception/IRQ/MRET new PC
     input   logic                               csr2exu_irq_i,              // IRQ request
@@ -103,13 +119,13 @@ module scr1_pipe_exu (
 
     // EXU <-> DMEM interface
     output  logic                               exu2dmem_req_o,             // Data memory request
-    output  type_scr1_mem_cmd_e                 exu2dmem_cmd_o,             // Data memory command
-    output  type_scr1_mem_width_e               exu2dmem_width_o,           // Data memory width
+    output  logic                               exu2dmem_cmd_o,             // Data memory command - cp.7
+    output  logic [1:0]                         exu2dmem_width_o,           // Data memory width
     output  logic [`SCR1_DMEM_AWIDTH-1:0]       exu2dmem_addr_o,            // Data memory address
     output  logic [`SCR1_DMEM_DWIDTH-1:0]       exu2dmem_wdata_o,           // Data memory write data
     input   logic                               dmem2exu_req_ack_i,         // Data memory request acknowledge
     input   logic [`SCR1_DMEM_DWIDTH-1:0]       dmem2exu_rdata_i,           // Data memory read data
-    input   type_scr1_mem_resp_e                dmem2exu_resp_i,            // Data memory response
+    input   logic [1:0]                         dmem2exu_resp_i,            // Data memory response - cp.7
 
     // EXU control
     output  logic                               exu2pipe_exc_req_o,         // Exception on last instruction
@@ -167,10 +183,10 @@ localparam SCR1_JUMP_MASK = `SCR1_XLEN'hFFFF_FFFE;
 // Local types declaration
 //------------------------------------------------------------------------------
 
-typedef enum logic {
-    SCR1_CSR_INIT,
-    SCR1_CSR_RDY
-} scr1_csr_access_e;
+//typedef enum logic {
+parameter     SCR1_CSR_INIT = 1'b0;
+parameter     SCR1_CSR_RDY  = 1'b1;
+//} scr1_csr_access_e;
 
 //------------------------------------------------------------------------------
 // Local signals declaration
@@ -219,7 +235,7 @@ logic                               exu_exc_req;
 logic                               exu_exc_req_ff;
 logic                               exu_exc_req_next;
 `endif // SCR1_DBG_EN
-type_scr1_exc_code_e                exc_code;
+logic [SCR1_EXC_CODE_WIDTH_E-1:0]   exc_code; // cp.7
 logic [`SCR1_XLEN-1:0]              exc_trap_val;
 logic                               instr_fault_rvi_hi;
 
@@ -263,7 +279,7 @@ logic                               lsu_req;
 logic                               lsu_rdy;
 logic [`SCR1_XLEN-1:0]              lsu_l_data;
 logic                               lsu_exc_req;
-type_scr1_exc_code_e                lsu_exc_code;
+logic [SCR1_EXC_CODE_WIDTH_E-1:0]   lsu_exc_code; // cp.7
 
 // EXU status signals
 //------------------------------------------------------------------------------
@@ -280,8 +296,8 @@ logic   [`SCR1_MPRF_AWIDTH-1:0]     mprf_rs2_addr;
 // CSR signals
 //------------------------------------------------------------------------------
 // CSR access register
-scr1_csr_access_e                   csr_access_ff;
-scr1_csr_access_e                   csr_access_next;
+logic                               csr_access_ff;
+logic                               csr_access_next;
 logic                               csr_access_init;
 
 //------------------------------------------------------------------------------
@@ -829,26 +845,41 @@ assign mprf_rs1_req = exu_queue_vd & idu2exu_use_rs1_i;
 assign mprf_rs2_req = exu_queue_vd & idu2exu_use_rs2_i;
 `else // SCR1_NO_EXE_STAGE
  `ifdef  SCR1_MPRF_RAM
-assign mprf_rs1_req = exu_queue_en
-                    ? (exu_queue_vd_next & idu2exu_use_rs1_i)
-                    : (exu_queue_vd      & idu2exu_use_rs1_ff);
-assign mprf_rs2_req = exu_queue_en
-                    ? (exu_queue_vd_next & idu2exu_use_rs2_i)
-                    : (exu_queue_vd      & idu2exu_use_rs2_ff);
+     assign mprf_rs1_req = exu_queue_en
+                         ? (exu_queue_vd_next & idu2exu_use_rs1_i)
+                         : (exu_queue_vd      & idu2exu_use_rs1_ff);
+     assign mprf_rs2_req = exu_queue_en
+                         ? (exu_queue_vd_next & idu2exu_use_rs2_i)
+                         : (exu_queue_vd      & idu2exu_use_rs2_ff);
  `else // SCR1_MPRF_RAM
-assign mprf_rs1_req = exu_queue_vd & idu2exu_use_rs1_ff;
-assign mprf_rs2_req = exu_queue_vd & idu2exu_use_rs2_ff;
- `endif // SCR1_MPRF_RAM
+    `ifdef  SCRC1_MPRF_STAGE // ADD FF Stage at MRPF
+        assign mprf_rs1_req = exu_queue_en
+                            ? (exu_queue_vd_next & idu2exu_use_rs1_i)
+                            : (exu_queue_vd      & idu2exu_use_rs1_ff);
+        assign mprf_rs2_req = exu_queue_en
+                            ? (exu_queue_vd_next & idu2exu_use_rs2_i)
+                            : (exu_queue_vd      & idu2exu_use_rs2_ff);
+
+     `else
+          assign mprf_rs1_req = exu_queue_vd & idu2exu_use_rs1_ff;
+          assign mprf_rs2_req = exu_queue_vd & idu2exu_use_rs2_ff;
+     `endif // SCR1_MPRF_RAM
+  `endif
 `endif // SCR1_NO_EXE_STAGE
 
 // If exu_queue isn't enabled we need previous addresses and usage flags because
 // RAM blocks read operation is SYNCHRONOUS
 `ifdef SCR1_MPRF_RAM
-assign mprf_rs1_addr = exu_queue_en ? idu2exu_cmd_i.rs1_addr : exu_queue.rs1_addr;
-assign mprf_rs2_addr = exu_queue_en ? idu2exu_cmd_i.rs2_addr : exu_queue.rs2_addr;
+     assign mprf_rs1_addr = exu_queue_en ? idu2exu_cmd_i.rs1_addr : exu_queue.rs1_addr;
+     assign mprf_rs2_addr = exu_queue_en ? idu2exu_cmd_i.rs2_addr : exu_queue.rs2_addr;
 `else // SCR1_MPRF_RAM
-assign mprf_rs1_addr = exu_queue.rs1_addr;
-assign mprf_rs2_addr = exu_queue.rs2_addr;
+    `ifdef SCRC1_MPRF_STAGE
+        assign mprf_rs1_addr = exu_queue_en ? idu2exu_cmd_i.rs1_addr : exu_queue.rs1_addr;
+        assign mprf_rs2_addr = exu_queue_en ? idu2exu_cmd_i.rs2_addr : exu_queue.rs2_addr;
+    `else
+        assign mprf_rs1_addr = exu_queue.rs1_addr;
+        assign mprf_rs2_addr = exu_queue.rs2_addr;
+     `endif
 `endif // SCR1_MPRF_RAM
 
 assign exu2mprf_rs1_addr_o = mprf_rs1_req ? `SCR1_MPRF_AWIDTH'(mprf_rs1_addr) : '0;

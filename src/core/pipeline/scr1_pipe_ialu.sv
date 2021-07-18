@@ -1,4 +1,20 @@
-/// Copyright by Syntacore LLC © 2016-2020. See LICENSE for details
+//////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_pipe_ialu.sv>
 /// @brief      Integer Arithmetic Logic Unit (IALU)
 ///
@@ -80,17 +96,17 @@ typedef struct packed {
 } type_scr1_ialu_flags_s;
 
  `ifdef SCR1_RVM_EXT
-typedef enum logic [1:0] {
-    SCR1_IALU_MDU_FSM_IDLE,
-    SCR1_IALU_MDU_FSM_ITER,
-    SCR1_IALU_MDU_FSM_CORR
-} type_scr1_ialu_fsm_state;
+//typedef enum logic [1:0] {
+parameter    SCR1_IALU_MDU_FSM_IDLE  = 2'b00;
+parameter    SCR1_IALU_MDU_FSM_ITER  = 2'b01;
+parameter    SCR1_IALU_MDU_FSM_CORR  = 2'b10;
+//} type_scr1_ialu_fsm_state;
 
-typedef enum logic [1:0] {
-   SCR1_IALU_MDU_NONE,
-   SCR1_IALU_MDU_MUL,
-   SCR1_IALU_MDU_DIV
-} type_scr1_ialu_mdu_cmd;
+//typedef enum logic [1:0] {
+parameter   SCR1_IALU_MDU_NONE       = 2'b00;
+parameter   SCR1_IALU_MDU_MUL        = 2'b01;
+parameter   SCR1_IALU_MDU_DIV        = 2'b10;
+//} type_scr1_ialu_mdu_cmd;
  `endif // SCR1_RVM_EXT
 
 //-------------------------------------------------------------------------------
@@ -123,8 +139,8 @@ logic                                       div_corr_req;       // Correction re
 logic                                       rem_corr_req;       // Correction request for REM(U) operations
 
 // MUL/DIV FSM signals
-type_scr1_ialu_fsm_state                    mdu_fsm_ff;         // Current FSM state
-type_scr1_ialu_fsm_state                    mdu_fsm_next;       // Next FSM state
+logic [1:0]                                 mdu_fsm_ff;         // Current FSM state
+logic [1:0]                                 mdu_fsm_next;       // Next FSM state
 logic                                       mdu_fsm_idle;       // MDU FSM is in IDLE state
 `ifdef SCR1_TRGT_SIMULATION
 logic                                       mdu_fsm_iter;       // MDU FSM is in ITER state
@@ -132,7 +148,7 @@ logic                                       mdu_fsm_iter;       // MDU FSM is in
 logic                                       mdu_fsm_corr;       // MDU FSM is in CORR state
 
 // MDU command signals
-type_scr1_ialu_mdu_cmd                      mdu_cmd;            // MDU command: 00 - NONE, 01 - MUL,  10 - DIV
+logic [1:0]                                 mdu_cmd;            // MDU command: 00 - NONE, 01 - MUL,  10 - DIV
 logic                                       mdu_cmd_mul;        // MDU command is MUL(HSU)
 logic                                       mdu_cmd_div;        // MDU command is DIV(U)/REM(U)
 logic        [1:0]                          mul_cmd;            // MUL command: 00 - MUL,  01 - MULH, 10 - MULHSU, 11 - MULHU
@@ -487,16 +503,17 @@ assign div_dvdnd_lo_next = (~mdu_cmd_div | mdu_fsm_corr) ? '0
 //-------------------------------------------------------------------------------
 // MDU adder
 //-------------------------------------------------------------------------------
+logic           sgn;
+logic           inv;
 
 always_comb begin
     mdu_sum_sub    = 1'b0;
     mdu_sum_op1    = '0;
     mdu_sum_op2    = '0;
+    sgn            = '0; // yosys - latch fix
+    inv            = '0; // yosys - latch fix
     case (mdu_cmd)
         SCR1_IALU_MDU_DIV : begin
-            logic           sgn;
-            logic           inv;
-
             sgn         = mdu_fsm_corr ? div_op1_is_neg ^ mdu_res_c_ff
                         : mdu_fsm_idle ? 1'b0
                                        : ~mdu_res_lo_ff[0];
@@ -683,6 +700,7 @@ SCR1_SVA_IALU_ILL_STATE : assert property (
     $onehot0({~exu2ialu_rvm_cmd_vd_i, mdu_fsm_iter, mdu_fsm_corr})
     ) else $error("IALU Error: illegal state");
 
+`ifndef VERILATOR    
 SCR1_SVA_IALU_JUMP_FROM_IDLE : assert property (
     @(negedge clk) disable iff (~rst_n)
     (mdu_fsm_idle & (~exu2ialu_rvm_cmd_vd_i | ~mdu_iter_req)) |=> mdu_fsm_idle
@@ -712,6 +730,7 @@ SCR1_SVA_IALU_CORR_TO_IDLE : assert property (
     @(negedge clk) disable iff (~rst_n)
     mdu_fsm_corr |=> mdu_fsm_idle
     ) else $error("EXU Error: illegal state stay in CORR");
+`endif // VERILATOR
 
 `endif // SCR1_RVM_EXT
 

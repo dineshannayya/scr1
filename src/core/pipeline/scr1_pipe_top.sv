@@ -1,7 +1,31 @@
-/// Copyright by Syntacore LLC © 2016-2020. See LICENSE for details
+//////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_pipe_top.sv>
 /// @brief      SCR1 pipeline top
 ///
+
+//----------------------------------------------------------------------------------
+//  project : YiFive
+// Rev: June 10, 2021, Dinesh A
+//           Bugfix- reset correction for scr1_pipe_tdu when debug is not enabled
+//           Note: previously reset rst_n is floating at simulation is failing
+//           when SCR1_DBG_EN is disabled
+//---------------------------------------------------------------------------------
 
 `include "scr1_arch_description.svh"
 `include "scr1_memif.svh"
@@ -23,6 +47,7 @@
 module scr1_pipe_top (
     // Common
     input   logic                                       pipe_rst_n,                 // Pipe reset
+    output  logic [48:0]                                pipe_debug,
 `ifdef SCR1_DBG_EN
     input   logic                                       pipe2hdu_rdc_qlfy_i,        // Pipe RDC qualifier
     input   logic                                       dbg_rst_n,                  // Debug reset
@@ -31,21 +56,21 @@ module scr1_pipe_top (
 
     // Instruction Memory Interface
     output  logic                                       pipe2imem_req_o,            // IMEM request
-    output  type_scr1_mem_cmd_e                         pipe2imem_cmd_o,            // IMEM command
+    output  logic                                       pipe2imem_cmd_o,            // IMEM command
     output  logic [`SCR1_IMEM_AWIDTH-1:0]               pipe2imem_addr_o,           // IMEM address
     input   logic                                       imem2pipe_req_ack_i,        // IMEM request acknowledge
     input   logic [`SCR1_IMEM_DWIDTH-1:0]               imem2pipe_rdata_i,          // IMEM read data
-    input   type_scr1_mem_resp_e                        imem2pipe_resp_i,           // IMEM response
+    input   logic [1:0]                                 imem2pipe_resp_i,           // IMEM response
 
     // Data Memory Interface
     output  logic                                       pipe2dmem_req_o,            // DMEM request
-    output  type_scr1_mem_cmd_e                         pipe2dmem_cmd_o,            // DMEM command
-    output  type_scr1_mem_width_e                       pipe2dmem_width_o,          // DMEM data width
+    output  logic                                       pipe2dmem_cmd_o,            // DMEM command
+    output  logic [1:0]                                 pipe2dmem_width_o,          // DMEM data width
     output  logic [`SCR1_DMEM_AWIDTH-1:0]               pipe2dmem_addr_o,           // DMEM address
     output  logic [`SCR1_DMEM_DWIDTH-1:0]               pipe2dmem_wdata_o,          // DMEM write data
     input   logic                                       dmem2pipe_req_ack_i,        // DMEM request acknowledge
     input   logic [`SCR1_DMEM_DWIDTH-1:0]               dmem2pipe_rdata_i,          // DMEM read data
-    input   type_scr1_mem_resp_e                        dmem2pipe_resp_i,           // DMEM response
+    input   logic [1:0]                                 dmem2pipe_resp_i,           // DMEM response
 
 `ifdef SCR1_DBG_EN
     // Debug interface:
@@ -167,7 +192,7 @@ logic                                       exu2csr_take_irq;       // Take IRQ 
 logic                                       exu2csr_take_exc;       // Take exception trap
 logic                                       exu2csr_mret_update;    // MRET update CSR
 logic                                       exu2csr_mret_instr;     // MRET instruction
-type_scr1_exc_code_e                        exu2csr_exc_code;       // Exception code (see scr1_arch_types.svh)
+logic [SCR1_EXC_CODE_WIDTH_E-1:0]           exu2csr_exc_code;       // Exception code (see scr1_arch_types.svh)
 logic [`SCR1_XLEN-1:0]                      exu2csr_trap_val;       // Trap value
 logic [`SCR1_XLEN-1:0]                      csr2exu_new_pc;         // Exception/IRQ/MRET new PC
 logic                                       csr2exu_irq;            // IRQ request
@@ -265,6 +290,10 @@ logic                                       exu_busy;
 logic                                       pipe2clkctl_wake_req_o;
 `endif // SCR1_CLKCTRL_EN
 
+
+assign pipe_debug = {curr_pc[31:0],new_pc_req,stop_fetch, exu_exc_req,brkpt,exu_init_pc,wfi_run2halt,instret,
+	             ifu2idu_vd,idu2ifu_rdy,idu2exu_req,exu2idu_rdy,exu2mprf_w_req,exu2csr_r_req,csr2exu_rw_exc,
+	             exu2csr_mret_update,csr2exu_irq,csr2exu_mstatus_mie_up};
 //-------------------------------------------------------------------------------
 // Pipeline logic
 //-------------------------------------------------------------------------------

@@ -1,4 +1,20 @@
-/// Copyright by Syntacore LLC © 2016-2021. See LICENSE for details
+//////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_dmem_ahb.sv>
 /// @brief      Data memory AHB bridge
 ///
@@ -14,12 +30,12 @@ module scr1_dmem_ahb (
     // Core Interface
     output  logic                           dmem_req_ack,
     input   logic                           dmem_req,
-    input   type_scr1_mem_cmd_e             dmem_cmd,
-    input   type_scr1_mem_width_e           dmem_width,
+    input   logic                           dmem_cmd,
+    input   logic [1:0]                     dmem_width,
     input   logic   [SCR1_AHB_WIDTH-1:0]    dmem_addr,
     input   logic   [SCR1_AHB_WIDTH-1:0]    dmem_wdata,
     output  logic   [SCR1_AHB_WIDTH-1:0]    dmem_rdata,
-    output  type_scr1_mem_resp_e            dmem_resp,
+    output  logic [1:0]                     dmem_resp,
 
     // AHB Interface
     output  logic   [3:0]                   hprot,
@@ -78,7 +94,7 @@ typedef struct packed {
 // Local functions
 //-------------------------------------------------------------------------------
 function automatic logic   [2:0] scr1_conv_mem2ahb_width (
-    input   type_scr1_mem_width_e    dmem_width
+    input   logic [1:0]              dmem_width
 );
     logic   [2:0]   tmp;
 begin
@@ -96,13 +112,13 @@ begin
             tmp = SCR1_HSIZE_ERR;
         end
     endcase
-    return tmp;
+    scr1_conv_mem2ahb_width =  tmp; // cp.11
 end
-endfunction : scr1_conv_mem2ahb_width
+endfunction
 
 function automatic logic[SCR1_AHB_WIDTH-1:0] scr1_conv_mem2ahb_wdata (
     input   logic   [1:0]                   dmem_addr,
-    input   type_scr1_mem_width_e           dmem_width,
+    input   logic [1:0]                     dmem_width,
     input   logic   [SCR1_AHB_WIDTH-1:0]    dmem_wdata
 );
     logic   [SCR1_AHB_WIDTH-1:0]  tmp;
@@ -145,9 +161,9 @@ begin
         default : begin
         end
     endcase
-    return tmp;
+    scr1_conv_mem2ahb_wdata = tmp;
 end
-endfunction : scr1_conv_mem2ahb_wdata
+endfunction
 
 function automatic logic[SCR1_AHB_WIDTH-1:0] scr1_conv_ahb2mem_rdata (
     input   logic [2:0]                 hwidth,
@@ -182,9 +198,9 @@ begin
         default : begin
         end
     endcase
-    return tmp;
+    scr1_conv_ahb2mem_rdata = tmp;
 end
-endfunction : scr1_conv_ahb2mem_rdata
+endfunction
 
 //-------------------------------------------------------------------------------
 // Local signal declaration

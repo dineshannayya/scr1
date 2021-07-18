@@ -1,4 +1,20 @@
-/// Copyright by Syntacore LLC © 2016-2020. See LICENSE for details
+//////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_tracelog.sv>
 /// @brief      Core tracelog module
 ///
@@ -18,7 +34,7 @@ module scr1_tracelog (
 `ifdef  SCR1_MPRF_RAM
     input   logic   [`SCR1_XLEN-1:0]            mprf2trace_int_i   [1:`SCR1_MPRF_SIZE-1], // MPRF registers content
 `else // SCR1_MPRF_RAM
-    input   type_scr1_mprf_v [1:`SCR1_MPRF_SIZE-1] mprf2trace_int_i,             // MPRF registers content
+    logic [`SCR1_XLEN-1:0]                      mprf2trace_int_i[1:`SCR1_MPRF_SIZE-1],             // MPRF registers content
 `endif // SCR1_MPRF_RAM
     input   logic                                 mprf2trace_wr_en_i,           // MPRF write enable
     input   logic [`SCR1_MPRF_AWIDTH-1:0]         mprf2trace_wr_addr_i,         // MPRF write address
@@ -48,7 +64,7 @@ module scr1_tracelog (
     input   logic [`SCR1_XLEN-1:2]                csr2trace_mepc_i,             // CSR MEPC register
  `endif // SCR1_RVC_EXT
     input   logic                                 csr2trace_mcause_irq_i,       // CSR MCAUSE.interrupt bit
-    input   type_scr1_exc_code_e                  csr2trace_mcause_ec_i,        // CSR MCAUSE.exception_code bit
+    input   [SCR1_EXC_CODE_WIDTH_E-1:0]           csr2trace_mcause_ec_i,        // CSR MCAUSE.exception_code bit
     input   logic [`SCR1_XLEN-1:0]                csr2trace_mtval_i,            // CSR MTVAL register
     input   logic                                 csr2trace_mstatus_mie_up_i,   // CSR MSTATUS.mie update flag
 
@@ -430,7 +446,7 @@ always_comb begin
 `else // SCR1_RVC_EXT
                               {csr2trace_mepc_i, 2'b00};
 `endif // SCR1_RVC_EXT
-    csr_trace1.mcause       = {csr2trace_mcause_irq_i, type_scr1_csr_mcause_ec_v'(csr2trace_mcause_ec_i)};
+    csr_trace1.mcause       = {csr2trace_mcause_irq_i, csr2trace_mcause_ec_i};
     csr_trace1.mtval        = csr2trace_mtval_i;
 
     csr_trace1.mstatus      = '0;

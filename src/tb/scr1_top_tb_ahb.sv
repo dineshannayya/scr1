@@ -354,5 +354,14 @@ scr1_memory_tb_ahb #(
     .dmem_hresp             (dmem_hresp )
 );
 
+
+`ifdef WFDUMP
+initial
+begin
+   $dumpfile("simx.vcd");
+   $dumpvars(0,scr1_top_tb_ahb);
+end
+`endif
+
 endmodule : scr1_top_tb_ahb
 

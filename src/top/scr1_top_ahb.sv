@@ -1,4 +1,20 @@
-/// Copyright by Syntacore LLC © 2016-2020. See LICENSE for details
+//////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_top_ahb.sv>
 /// @brief      SCR1 AHB top
 ///
@@ -100,68 +116,68 @@ logic                                               tapc_trst_n;
 // Instruction memory interface from core to router
 logic                                               core_imem_req_ack;
 logic                                               core_imem_req;
-type_scr1_mem_cmd_e                                 core_imem_cmd;
+logic                                               core_imem_cmd;
 logic [`SCR1_IMEM_AWIDTH-1:0]                       core_imem_addr;
 logic [`SCR1_IMEM_DWIDTH-1:0]                       core_imem_rdata;
-type_scr1_mem_resp_e                                core_imem_resp;
+logic [1:0]                                         core_imem_resp;
 
 // Data memory interface from core to router
 logic                                               core_dmem_req_ack;
 logic                                               core_dmem_req;
-type_scr1_mem_cmd_e                                 core_dmem_cmd;
-type_scr1_mem_width_e                               core_dmem_width;
+logic                                               core_dmem_cmd;
+logic [1:0]                                         core_dmem_width;
 logic [`SCR1_DMEM_AWIDTH-1:0]                       core_dmem_addr;
 logic [`SCR1_DMEM_DWIDTH-1:0]                       core_dmem_wdata;
 logic [`SCR1_DMEM_DWIDTH-1:0]                       core_dmem_rdata;
-type_scr1_mem_resp_e                                core_dmem_resp;
+logic [1:0]                                         core_dmem_resp;
 
 // Instruction memory interface from router to AHB bridge
 logic                                               ahb_imem_req_ack;
 logic                                               ahb_imem_req;
-type_scr1_mem_cmd_e                                 ahb_imem_cmd;
+logic                                               ahb_imem_cmd;
 logic [`SCR1_IMEM_AWIDTH-1:0]                       ahb_imem_addr;
 logic [`SCR1_IMEM_DWIDTH-1:0]                       ahb_imem_rdata;
-type_scr1_mem_resp_e                                ahb_imem_resp;
+logic [1:0]                                         ahb_imem_resp;
 
 // Data memory interface from router to AHB bridge
 logic                                               ahb_dmem_req_ack;
 logic                                               ahb_dmem_req;
-type_scr1_mem_cmd_e                                 ahb_dmem_cmd;
-type_scr1_mem_width_e                               ahb_dmem_width;
+logic                                               ahb_dmem_cmd;
+logic [1:0]                                         ahb_dmem_width;
 logic [`SCR1_DMEM_AWIDTH-1:0]                       ahb_dmem_addr;
 logic [`SCR1_DMEM_DWIDTH-1:0]                       ahb_dmem_wdata;
 logic [`SCR1_DMEM_DWIDTH-1:0]                       ahb_dmem_rdata;
-type_scr1_mem_resp_e                                ahb_dmem_resp;
+logic [1:0]                                         ahb_dmem_resp;
 
 `ifdef SCR1_TCM_EN
 // Instruction memory interface from router to TCM
 logic                                               tcm_imem_req_ack;
 logic                                               tcm_imem_req;
-type_scr1_mem_cmd_e                                 tcm_imem_cmd;
+logic                                               tcm_imem_cmd;
 logic [`SCR1_IMEM_AWIDTH-1:0]                       tcm_imem_addr;
 logic [`SCR1_IMEM_DWIDTH-1:0]                       tcm_imem_rdata;
-type_scr1_mem_resp_e                                tcm_imem_resp;
+logic [1:0]                                         tcm_imem_resp;
 
 // Data memory interface from router to TCM
 logic                                               tcm_dmem_req_ack;
 logic                                               tcm_dmem_req;
-type_scr1_mem_cmd_e                                 tcm_dmem_cmd;
-type_scr1_mem_width_e                               tcm_dmem_width;
+logic                                               tcm_dmem_cmd;
+logic [1:0]                                         tcm_dmem_width;
 logic [`SCR1_DMEM_AWIDTH-1:0]                       tcm_dmem_addr;
 logic [`SCR1_DMEM_DWIDTH-1:0]                       tcm_dmem_wdata;
 logic [`SCR1_DMEM_DWIDTH-1:0]                       tcm_dmem_rdata;
-type_scr1_mem_resp_e                                tcm_dmem_resp;
+logic [1:0]                                         tcm_dmem_resp;
 `endif // SCR1_TCM_EN
 
 // Data memory interface from router to memory-mapped timer
 logic                                               timer_dmem_req_ack;
 logic                                               timer_dmem_req;
-type_scr1_mem_cmd_e                                 timer_dmem_cmd;
-type_scr1_mem_width_e                               timer_dmem_width;
+logic                                               timer_dmem_cmd;
+logic [1:0]                                         timer_dmem_width;
 logic [`SCR1_DMEM_AWIDTH-1:0]                       timer_dmem_addr;
 logic [`SCR1_DMEM_DWIDTH-1:0]                       timer_dmem_wdata;
 logic [`SCR1_DMEM_DWIDTH-1:0]                       timer_dmem_rdata;
-type_scr1_mem_resp_e                                timer_dmem_resp;
+logic [1:0]                                         timer_dmem_resp;
 
 logic                                               timer_irq;
 logic [63:0]                                        timer_val;

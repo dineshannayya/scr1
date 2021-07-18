@@ -1,4 +1,20 @@
-/// Copyright by Syntacore LLC © 2016-2021. See LICENSE for details
+///////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_core_top.sv>
 /// @brief      SCR1 core top
 ///
@@ -27,6 +43,7 @@ module scr1_core_top (
     input   logic                                   clk,                        // Core clock
     output  logic                                   core_rst_n_o,               // Core reset
     output  logic                                   core_rdc_qlfy_o,            // Core RDC qualifier
+    output  logic   [48:0]                          core_debug  ,
 `ifdef SCR1_DBG_EN
     output  logic                                   sys_rst_n_o,                // System reset
     output  logic                                   sys_rdc_qlfy_o,             // System RDC qualifier
@@ -63,20 +80,20 @@ module scr1_core_top (
     // Instruction Memory Interface
     input   logic                                   imem2core_req_ack_i,        // IMEM request acknowledge
     output  logic                                   core2imem_req_o,            // IMEM request
-    output  type_scr1_mem_cmd_e                     core2imem_cmd_o,            // IMEM command
+    output  logic                                   core2imem_cmd_o,            // IMEM command
     output  logic [`SCR1_IMEM_AWIDTH-1:0]           core2imem_addr_o,           // IMEM address
     input   logic [`SCR1_IMEM_DWIDTH-1:0]           imem2core_rdata_i,          // IMEM read data
-    input   type_scr1_mem_resp_e                    imem2core_resp_i,           // IMEM response
+    input   logic [1:0]                             imem2core_resp_i,           // IMEM response
 
     // Data Memory Interface
     input   logic                                   dmem2core_req_ack_i,        // DMEM request acknowledge
     output  logic                                   core2dmem_req_o,            // DMEM request
-    output  type_scr1_mem_cmd_e                     core2dmem_cmd_o,            // DMEM command
-    output  type_scr1_mem_width_e                   core2dmem_width_o,          // DMEM data width
+    output  logic                                   core2dmem_cmd_o,            // DMEM command
+    output  logic[1:0]                             core2dmem_width_o,          // DMEM data width
     output  logic [`SCR1_DMEM_AWIDTH-1:0]           core2dmem_addr_o,           // DMEM address
     output  logic [`SCR1_DMEM_DWIDTH-1:0]           core2dmem_wdata_o,          // DMEM write data
     input   logic [`SCR1_DMEM_DWIDTH-1:0]           dmem2core_rdata_i,          // DMEM read data
-    input   type_scr1_mem_resp_e                    dmem2core_resp_i            // DMEM response
+    input   logic [1:0]                             dmem2core_resp_i            // DMEM response
 );
 
 //-------------------------------------------------------------------------------
@@ -274,6 +291,7 @@ assign core_rst_n_o         = core_rst_n;
 scr1_pipe_top i_pipe_top (
     // Control
     .pipe_rst_n                     (core_rst_n             ),
+    .pipe_debug                     (core_debug             ),
 `ifdef SCR1_DBG_EN
     .pipe2hdu_rdc_qlfy_i            (core2hdu_rdc_qlfy      ),
     .dbg_rst_n                      (hdu_rst_n              ),

@@ -1,3 +1,20 @@
+//////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// Copyright by Syntacore LLC © 2016-2020. See LICENSE for details
 /// @file       <scr1_pipe_mprf.sv>
 /// @brief      Multi Port Register File (MPRF)
@@ -60,7 +77,7 @@ logic   [`SCR1_XLEN-1:0]    mprf_int   [1:`SCR1_MPRF_SIZE-1];
 logic   [`SCR1_XLEN-1:0]    mprf_int2  [1:`SCR1_MPRF_SIZE-1];
  `endif
 `else  // distributed logic implementation
-type_scr1_mprf_v [1:`SCR1_MPRF_SIZE-1]                  mprf_int;
+logic [`SCR1_XLEN-1:0]      mprf_int [1:`SCR1_MPRF_SIZE-1];
 `endif
 
 //------------------------------------------------------------------------------
@@ -130,8 +147,20 @@ end
 //------------------------------------------------------------------------------
 
 // asynchronous read operation
-assign  mprf2exu_rs1_data_o = ( rs1_addr_vd ) ? mprf_int[exu2mprf_rs1_addr_i] : '0;
-assign  mprf2exu_rs2_data_o = ( rs2_addr_vd ) ? mprf_int[exu2mprf_rs2_addr_i] : '0;
+//
+`ifdef SCRC1_MPRF_STAGE
+   assign  rs1_new_data_req    =   wr_req_vd & ( exu2mprf_rs1_addr_i == exu2mprf_rd_addr_i );
+   assign  rs2_new_data_req    =   wr_req_vd & ( exu2mprf_rs2_addr_i == exu2mprf_rd_addr_i );
+
+   always_ff @( posedge clk ) begin
+       mprf2exu_rs1_data_o   <=   (rs1_new_data_req) ? exu2mprf_rd_data_i : ( rs1_addr_vd ) ? mprf_int[exu2mprf_rs1_addr_i] : '0;
+       mprf2exu_rs2_data_o   <=   (rs2_new_data_req) ? exu2mprf_rd_data_i : ( rs2_addr_vd ) ? mprf_int[exu2mprf_rs2_addr_i] : '0;
+   end
+
+`else 
+    assign  mprf2exu_rs1_data_o = ( rs1_addr_vd ) ? mprf_int[exu2mprf_rs1_addr_i] : '0;
+    assign  mprf2exu_rs2_data_o = ( rs2_addr_vd ) ? mprf_int[exu2mprf_rs2_addr_i] : '0;
+`endif
 
 // write operation
  `ifdef SCR1_MPRF_RST_EN

@@ -1,4 +1,20 @@
-/// Copyright by Syntacore LLC © 2016-2020. See LICENSE for details
+//////////////////////////////////////////////////////////////////////////////
+// SPDX-FileCopyrightText: Syntacore LLC © 2016-2021
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileContributor: Syntacore LLC
+// //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_dm.sv>
 /// @brief      Debug Module (DM)
 ///
@@ -113,13 +129,13 @@ typedef enum logic [2:0] {
     DHI_STATE_RESUME_RUN
 } type_scr1_dhi_fsm_e;
 
-typedef enum logic [SCR1_DBG_ABSTRACTCS_CMDERR_WDTH:0] {
-    ABS_ERR_NONE      = (SCR1_DBG_ABSTRACTCS_CMDERR_WDTH+1)'('d0),
-    ABS_ERR_BUSY      = (SCR1_DBG_ABSTRACTCS_CMDERR_WDTH+1)'('d1),
-    ABS_ERR_CMD       = (SCR1_DBG_ABSTRACTCS_CMDERR_WDTH+1)'('d2),
-    ABS_ERR_EXCEPTION = (SCR1_DBG_ABSTRACTCS_CMDERR_WDTH+1)'('d3),
-    ABS_ERR_NOHALT    = (SCR1_DBG_ABSTRACTCS_CMDERR_WDTH+1)'('d4)
-} type_scr1_abs_err_e;
+//typedef enum logic [SCR1_DBG_ABSTRACTCS_CMDERR_WDTH:0] {
+parameter    ABS_ERR_NONE      = (SCR1_DBG_ABSTRACTCS_CMDERR_WDTH+1)'('d0);
+parameter    ABS_ERR_BUSY      = (SCR1_DBG_ABSTRACTCS_CMDERR_WDTH+1)'('d1);
+parameter    ABS_ERR_CMD       = (SCR1_DBG_ABSTRACTCS_CMDERR_WDTH+1)'('d2);
+parameter    ABS_ERR_EXCEPTION = (SCR1_DBG_ABSTRACTCS_CMDERR_WDTH+1)'('d3);
+parameter    ABS_ERR_NOHALT    = (SCR1_DBG_ABSTRACTCS_CMDERR_WDTH+1)'('d4);
+//} type_scr1_abs_err_e;
 
 
 //------------------------------------------------------------------------------
@@ -362,8 +378,8 @@ logic                                             abs_err_acc_busy_upd;
 logic                                             abs_err_acc_busy_ff;
 logic                                             abs_err_acc_busy_next;
 
-type_scr1_abs_err_e                               abstractcs_cmderr_ff;
-type_scr1_abs_err_e                               abstractcs_cmderr_next;
+logic [SCR1_DBG_ABSTRACTCS_CMDERR_WDTH:0]         abstractcs_cmderr_ff;
+logic [SCR1_DBG_ABSTRACTCS_CMDERR_WDTH:0]         abstractcs_cmderr_next;
 
 // Abstract instruction signals
 //------------------------------------------------------------------------------
@@ -1131,9 +1147,9 @@ always_comb begin
 
         ABS_STATE_ERR: begin
             if (dmi_req_abstractcs & dmi2dm_wr_i) begin
-                abstractcs_cmderr_next = type_scr1_abs_err_e'(logic'(abstractcs_cmderr_ff)
+                abstractcs_cmderr_next = abstractcs_cmderr_ff  // cp.7
                                        & (~dmi2dm_wdata_i[SCR1_DBG_ABSTRACTCS_CMDERR_HI:
-                                                          SCR1_DBG_ABSTRACTCS_CMDERR_LO]));
+                                                          SCR1_DBG_ABSTRACTCS_CMDERR_LO]);
             end
         end
 
