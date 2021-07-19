@@ -17,7 +17,10 @@
 // //////////////////////////////////////////////////////////////////////////
 /// @file       <scr1_pipe_ialu.sv>
 /// @brief      Integer Arithmetic Logic Unit (IALU)
-///
+////     Ver 0.1 - 18th July 2021, Dinesh A, project: yifive
+////           A. For Timing Reason, Input and Output are registered
+////              Added SCR1_GOLDEN define to preserve the Previous Logic
+////////////////////////////////////////////////////////////////////////////
 
 //-------------------------------------------------------------------------------
  //
@@ -70,16 +73,10 @@ module scr1_pipe_ialu (
 //-------------------------------------------------------------------------------
 
 `ifdef SCR1_RVM_EXT
- `ifdef SCR1_FAST_MUL
 localparam SCR1_MUL_WIDTH     = `SCR1_XLEN;
 localparam SCR1_MUL_RES_WIDTH = 2 * `SCR1_XLEN;
 localparam SCR1_MDU_SUM_WIDTH = `SCR1_XLEN + 1;
- `else
-localparam SCR1_MUL_STG_NUM   = 32;
-localparam SCR1_MUL_WIDTH     = 32 / SCR1_MUL_STG_NUM;
-localparam SCR1_MUL_CNT_INIT  = 32'b1 << (`SCR1_XLEN/SCR1_MUL_WIDTH - 2);
-localparam SCR1_MDU_SUM_WIDTH = `SCR1_XLEN + SCR1_MUL_WIDTH;
- `endif // ~SCR1_FAST_MUL
+
 localparam SCR1_DIV_WIDTH     = 1;
 localparam SCR1_DIV_CNT_INIT  = 32'b1 << (`SCR1_XLEN/SCR1_DIV_WIDTH - 2);
 `endif // SCR1_RVM_EXT
@@ -164,13 +161,7 @@ logic                                       mul_op1_sgn;        // First MUL ope
 logic                                       mul_op2_sgn;        // Second MUL operand is negative
 logic signed [`SCR1_XLEN:0]                 mul_op1;            // MUL operand 1
 logic signed [SCR1_MUL_WIDTH:0]             mul_op2;            // MUL operand 1
- `ifdef SCR1_FAST_MUL
 logic signed [SCR1_MUL_RES_WIDTH-1:0]       mul_res;            // MUL result
- `else // ~SCR1_FAST_MUL
-logic signed [SCR1_MDU_SUM_WIDTH:0]         mul_part_prod;
-logic        [`SCR1_XLEN-1:0]               mul_res_hi;
-logic        [`SCR1_XLEN-1:0]               mul_res_lo;
- `endif // ~SCR1_FAST_MUL
 
 // Divisor signals
 logic                                       div_ops_are_sgn;
@@ -205,6 +196,78 @@ logic        [`SCR1_XLEN-1:0]               mdu_res_lo_ff;
 logic        [`SCR1_XLEN-1:0]               mdu_res_lo_next;
 `endif // SCR1_RVM_EXT
 
+
+//-------------------------------------------------------
+// Adding Input Register to break Timing Path 
+// ------------------------------------------------------
+logic [`SCR1_XLEN-1:0]          exu2ialu_main_op1_ff;        // main ALU 1st operand
+logic [`SCR1_XLEN-1:0]          exu2ialu_main_op2_ff;        // main ALU 2nd operand
+type_scr1_ialu_cmd_sel_e        exu2ialu_cmd_ff;             // IALU command
+logic                           exu2ialu_rvm_cmd_vd_ff;      // MUL/DIV command valid
+logic [`SCR1_XLEN-1:0]          ialu2exu_main_res_i;        // main ALU result
+logic                           ialu2exu_cmp_res_i;         // IALU comparison result
+logic                           ialu2exu_rvm_res_rdy_i;     // MUL/DIV result ready
+logic                           ialu_rdy        ;  // ialu ready
+
+`ifdef SCR1_GOLDEN
+assign	exu2ialu_main_op1_ff = exu2ialu_main_op1_i;
+assign  exu2ialu_main_op2_ff = exu2ialu_main_op2_i;
+assign  exu2ialu_cmd_ff      = exu2ialu_cmd_i;
+assign	exu2ialu_rvm_cmd_vd_ff = exu2ialu_rvm_cmd_vd_i;
+
+assign	ialu2exu_main_res_o     = ialu2exu_main_res_i;
+assign  ialu2exu_cmp_res_o      = ialu2exu_cmp_res_i;
+assign  ialu2exu_rvm_res_rdy_o  = ialu2exu_rvm_res_rdy_i;
+assign  ialu_rdy                = 1; 
+
+`else
+always_ff @(posedge clk, negedge rst_n) begin
+    if (~rst_n) begin
+	exu2ialu_main_op1_ff <= '0;
+        exu2ialu_main_op2_ff <= '0;
+        exu2ialu_cmd_ff      <= '0;
+	exu2ialu_rvm_cmd_vd_ff <= '0;
+    end else begin
+	exu2ialu_main_op1_ff <= exu2ialu_main_op1_i;
+        exu2ialu_main_op2_ff <= exu2ialu_main_op2_i;
+        exu2ialu_cmd_ff      <= exu2ialu_cmd_i;
+	exu2ialu_rvm_cmd_vd_ff <= exu2ialu_rvm_cmd_vd_i;
+    end
+end
+
+//-------------------------------------------------------
+// Adding Output Register to break Timing Path 
+// ------------------------------------------------------
+
+always_ff @(posedge clk, negedge rst_n) begin
+    if (~rst_n) begin
+	ialu2exu_main_res_o <= '0;
+        ialu2exu_cmp_res_o <= '0;
+        ialu2exu_rvm_res_rdy_o      <= '0;
+    end else begin
+	ialu2exu_main_res_o         <= ialu2exu_main_res_i;
+        ialu2exu_cmp_res_o          <= ialu2exu_cmp_res_i;
+        ialu2exu_rvm_res_rdy_o      <= ialu2exu_rvm_res_rdy_i;
+    end
+end
+
+//-------------------------------------------------------
+// Creating Two cycle Latency to break timing path
+// One Cycle for Register Input + One Cycle Registered Output
+// -----------------------------------------------------
+logic cmd_vd_d;
+always_ff @(posedge clk, negedge rst_n) begin
+    if (~rst_n) begin
+	cmd_vd_d <= '0;
+        ialu_rdy <= '0;
+    end else begin
+	cmd_vd_d <= exu2ialu_rvm_cmd_vd_i & (ialu_rdy ==0);
+        ialu_rdy <= cmd_vd_d & exu2ialu_rvm_cmd_vd_i & (ialu_rdy ==0) ;
+    end
+end
+
+`endif
+
 //-------------------------------------------------------------------------------
 // Main adder
 //-------------------------------------------------------------------------------
@@ -218,15 +281,15 @@ logic        [`SCR1_XLEN-1:0]               mdu_res_lo_next;
 // Carry out (MSB of main_sum_res) is evaluated correctly because the result
 // width equals to the maximum width of both the right-hand and left-hand side variables
 always_comb begin
-    main_sum_res = (exu2ialu_cmd_i != SCR1_IALU_CMD_ADD)
-                 ? (exu2ialu_main_op1_i - exu2ialu_main_op2_i)   // Subtraction and comparison
-                 : (exu2ialu_main_op1_i + exu2ialu_main_op2_i);  // Addition
+    main_sum_res = (exu2ialu_cmd_ff != SCR1_IALU_CMD_ADD)
+                 ? (exu2ialu_main_op1_ff - exu2ialu_main_op2_ff)   // Subtraction and comparison
+                 : (exu2ialu_main_op1_ff + exu2ialu_main_op2_ff);  // Addition
 
-    main_sum_pos_ovflw = ~exu2ialu_main_op1_i[`SCR1_XLEN-1]
-                       &  exu2ialu_main_op2_i[`SCR1_XLEN-1]
+    main_sum_pos_ovflw = ~exu2ialu_main_op1_ff[`SCR1_XLEN-1]
+                       &  exu2ialu_main_op2_ff[`SCR1_XLEN-1]
                        &  main_sum_res[`SCR1_XLEN-1];
-    main_sum_neg_ovflw =  exu2ialu_main_op1_i[`SCR1_XLEN-1]
-                       & ~exu2ialu_main_op2_i[`SCR1_XLEN-1]
+    main_sum_neg_ovflw =  exu2ialu_main_op1_ff[`SCR1_XLEN-1]
+                       & ~exu2ialu_main_op2_ff[`SCR1_XLEN-1]
                        & ~main_sum_res[`SCR1_XLEN-1];
 
     // FLAGS1 - flags for comparison (result of subtraction)
@@ -260,17 +323,17 @@ assign ialu2exu_addr_res_o = exu2ialu_addr_op1_i + exu2ialu_addr_op2_i;
  // - Arithmetic right shift  (SRAI/SRA)
 //
 
-assign ialu_cmd_shft = (exu2ialu_cmd_i == SCR1_IALU_CMD_SLL)
-                     | (exu2ialu_cmd_i == SCR1_IALU_CMD_SRL)
-                     | (exu2ialu_cmd_i == SCR1_IALU_CMD_SRA);
+assign ialu_cmd_shft = (exu2ialu_cmd_ff == SCR1_IALU_CMD_SLL)
+                     | (exu2ialu_cmd_ff == SCR1_IALU_CMD_SRL)
+                     | (exu2ialu_cmd_ff == SCR1_IALU_CMD_SRA);
 assign shft_cmd      = ialu_cmd_shft
-                     ? {(exu2ialu_cmd_i != SCR1_IALU_CMD_SLL),
-                        (exu2ialu_cmd_i == SCR1_IALU_CMD_SRA)}
+                     ? {(exu2ialu_cmd_ff != SCR1_IALU_CMD_SLL),
+                        (exu2ialu_cmd_ff == SCR1_IALU_CMD_SRA)}
                      : 2'b00;
 
 always_comb begin
-    shft_op1 = exu2ialu_main_op1_i;
-    shft_op2 = exu2ialu_main_op2_i[4:0];
+    shft_op1 = exu2ialu_main_op1_ff;
+    shft_op2 = exu2ialu_main_op2_ff[4:0];
     case (shft_cmd)
         2'b10   : shft_res = shft_op1  >> shft_op2;
         2'b11   : shft_res = shft_op1 >>> shft_op2;
@@ -297,28 +360,23 @@ end
 // MUL/DIV FSM Control logic
 //-------------------------------------------------------------------------------
 
-assign mdu_cmd_div = (exu2ialu_cmd_i == SCR1_IALU_CMD_DIV)
-                   | (exu2ialu_cmd_i == SCR1_IALU_CMD_DIVU)
-                   | (exu2ialu_cmd_i == SCR1_IALU_CMD_REM)
-                   | (exu2ialu_cmd_i == SCR1_IALU_CMD_REMU);
-assign mdu_cmd_mul = (exu2ialu_cmd_i == SCR1_IALU_CMD_MUL)
-                   | (exu2ialu_cmd_i == SCR1_IALU_CMD_MULH)
-                   | (exu2ialu_cmd_i == SCR1_IALU_CMD_MULHU)
-                   | (exu2ialu_cmd_i == SCR1_IALU_CMD_MULHSU);
+assign mdu_cmd_div = (exu2ialu_cmd_ff == SCR1_IALU_CMD_DIV)
+                   | (exu2ialu_cmd_ff == SCR1_IALU_CMD_DIVU)
+                   | (exu2ialu_cmd_ff == SCR1_IALU_CMD_REM)
+                   | (exu2ialu_cmd_ff == SCR1_IALU_CMD_REMU);
+assign mdu_cmd_mul = (exu2ialu_cmd_ff == SCR1_IALU_CMD_MUL)
+                   | (exu2ialu_cmd_ff == SCR1_IALU_CMD_MULH)
+                   | (exu2ialu_cmd_ff == SCR1_IALU_CMD_MULHU)
+                   | (exu2ialu_cmd_ff == SCR1_IALU_CMD_MULHSU);
 
 assign mdu_cmd     = mdu_cmd_div ? SCR1_IALU_MDU_DIV
-                   : mdu_cmd_mul ? SCR1_IALU_MDU_MUL
                                  : SCR1_IALU_MDU_NONE;
 
-assign main_ops_non_zero = |exu2ialu_main_op1_i & |exu2ialu_main_op2_i;
-assign main_ops_diff_sgn = exu2ialu_main_op1_i[`SCR1_XLEN-1]
-                         ^ exu2ialu_main_op2_i[`SCR1_XLEN-1];
+assign main_ops_non_zero = |exu2ialu_main_op1_ff & |exu2ialu_main_op2_ff;
+assign main_ops_diff_sgn = exu2ialu_main_op1_ff[`SCR1_XLEN-1]
+                         ^ exu2ialu_main_op2_ff[`SCR1_XLEN-1];
 
- `ifdef SCR1_FAST_MUL
-    assign mdu_cmd_is_iter = mdu_cmd_div;
- `else // ~SCR1_FAST_MUL
-    assign mdu_cmd_is_iter = mdu_cmd_mul | mdu_cmd_div;
- `endif // ~SCR1_FAST_MUL
+assign mdu_cmd_is_iter = mdu_cmd_div;
 
 assign mdu_iter_req = mdu_cmd_is_iter ? (main_ops_non_zero & mdu_fsm_idle) : 1'b0;
 assign mdu_iter_rdy = mdu_iter_cnt[0];
@@ -334,7 +392,7 @@ assign mdu_corr_req = mdu_cmd_div & (div_corr_req | rem_corr_req);
 // MDU iteration counter
 //------------------------------------------------------------------------------
 
-assign mdu_iter_cnt_en = exu2ialu_rvm_cmd_vd_i & ~ialu2exu_rvm_res_rdy_o;
+assign mdu_iter_cnt_en = exu2ialu_rvm_cmd_vd_ff & ~ialu2exu_rvm_res_rdy_i;
 
 always_ff @(posedge clk) begin
     if (mdu_iter_cnt_en) begin
@@ -344,9 +402,6 @@ end
 
 assign mdu_iter_cnt_next = ~mdu_fsm_idle ? mdu_iter_cnt >> 1
                          : mdu_cmd_div   ? SCR1_DIV_CNT_INIT
- `ifndef SCR1_FAST_MUL
-                         : mdu_cmd_mul   ? SCR1_MUL_CNT_INIT
- `endif // ~SCR1_FAST_MUL
                                          : mdu_iter_cnt;
 
 //-------------------------------------------------------------------------------
@@ -364,7 +419,7 @@ end
 always_comb begin
     mdu_fsm_next = SCR1_IALU_MDU_FSM_IDLE;
 
-    if (exu2ialu_rvm_cmd_vd_i) begin
+    if (exu2ialu_rvm_cmd_vd_ff) begin
         case (mdu_fsm_ff)
             SCR1_IALU_MDU_FSM_IDLE : begin
                 mdu_fsm_next = mdu_iter_req  ? SCR1_IALU_MDU_FSM_ITER
@@ -410,30 +465,38 @@ assign mdu_fsm_corr = (mdu_fsm_ff == SCR1_IALU_MDU_FSM_CORR);
  //
 //
 
-assign mul_cmd  = {((exu2ialu_cmd_i == SCR1_IALU_CMD_MULHU) | (exu2ialu_cmd_i == SCR1_IALU_CMD_MULHSU)),
-                   ((exu2ialu_cmd_i == SCR1_IALU_CMD_MULHU) | (exu2ialu_cmd_i == SCR1_IALU_CMD_MULH))};
+assign mul_cmd  = {((exu2ialu_cmd_ff == SCR1_IALU_CMD_MULHU) | (exu2ialu_cmd_ff == SCR1_IALU_CMD_MULHSU)),
+                   ((exu2ialu_cmd_ff == SCR1_IALU_CMD_MULHU) | (exu2ialu_cmd_ff == SCR1_IALU_CMD_MULH))};
 
 assign mul_cmd_hi     = |mul_cmd;
 assign mul_op1_is_sgn = ~&mul_cmd;
 assign mul_op2_is_sgn = ~mul_cmd[1];
-assign mul_op1_sgn    = mul_op1_is_sgn & exu2ialu_main_op1_i[`SCR1_XLEN-1];
-assign mul_op2_sgn    = mul_op2_is_sgn & exu2ialu_main_op2_i[`SCR1_XLEN-1];
+assign mul_op1_sgn    = mul_op1_is_sgn & exu2ialu_main_op1_ff[`SCR1_XLEN-1];
+assign mul_op2_sgn    = mul_op2_is_sgn & exu2ialu_main_op2_ff[`SCR1_XLEN-1];
 
 `ifdef SCR1_FAST_MUL
-assign mul_op1 = mdu_cmd_mul ? $signed({mul_op1_sgn, exu2ialu_main_op1_i}) : '0;
-assign mul_op2 = mdu_cmd_mul ? $signed({mul_op2_sgn, exu2ialu_main_op2_i}) : '0;
+assign mul_op1 = mdu_cmd_mul ? $signed({mul_op1_sgn, exu2ialu_main_op1_ff}) : '0;
+assign mul_op2 = mdu_cmd_mul ? $signed({mul_op2_sgn, exu2ialu_main_op2_ff}) : '0;
 assign mul_res = mdu_cmd_mul ? mul_op1 * mul_op2                           : 'sb0;
 `else // ~SCR1_FAST_MUL
-assign mul_op1 = mdu_cmd_mul  ? $signed({mul_op1_sgn, exu2ialu_main_op1_i}) : '0;
-assign mul_op2 = ~mdu_cmd_mul ? '0
-               : mdu_fsm_idle ? $signed({1'b0, exu2ialu_main_op2_i[SCR1_MUL_WIDTH-1:0]})
-                              : $signed({(mdu_iter_cnt[0] & mul_op2_is_sgn & mdu_res_lo_ff[SCR1_MUL_WIDTH-1]),
-                                          mdu_res_lo_ff[SCR1_MUL_WIDTH-1:0]});
 
-assign mul_part_prod            = mdu_cmd_mul  ? mul_op1 * mul_op2 : 'sb0;
-assign {mul_res_hi, mul_res_lo} = ~mdu_cmd_mul ? '0
-                                : mdu_fsm_idle ? ({mdu_sum_res, exu2ialu_main_op2_i[`SCR1_XLEN-1:SCR1_MUL_WIDTH]})
-                                               : ({mdu_sum_res, mdu_res_lo_ff[`SCR1_XLEN-1:SCR1_MUL_WIDTH]});
+assign mul_op1 = mdu_cmd_mul ? $signed({mul_op1_sgn, exu2ialu_main_op1_ff}) : '0;
+assign mul_op2 = mdu_cmd_mul ? $signed({mul_op2_sgn, exu2ialu_main_op2_ff}) : '0;
+
+logic mul_rdy;
+
+scr1_pipe_mul u_mul(
+	.clk          (clk), 
+	.rstn         (rst_n), 
+	.data_valid   (mdu_cmd_mul),   // input valid
+	.Din1         (mul_op1),       // first operand
+	.Din2         (mul_op2),       // second operand
+	.des_hig      (mul_res[SCR1_MUL_RES_WIDTH-1:`SCR1_XLEN]),    // first result
+	.des_low      (mul_res[`SCR1_XLEN-1:0]),    // second result
+	.mul_rdy_o    (mul_rdy)      // Multiply result ready
+    );
+
+
 `endif // ~SCR1_FAST_MUL
 
 //-------------------------------------------------------------------------------
@@ -462,12 +525,12 @@ assign {mul_res_hi, mul_res_lo} = ~mdu_cmd_mul ? '0
  // lower part of dividend are zero
 //
 
-assign div_cmd  = {((exu2ialu_cmd_i == SCR1_IALU_CMD_REM)   | (exu2ialu_cmd_i == SCR1_IALU_CMD_REMU)),
-                   ((exu2ialu_cmd_i == SCR1_IALU_CMD_REMU)  | (exu2ialu_cmd_i == SCR1_IALU_CMD_DIVU))};
+assign div_cmd  = {((exu2ialu_cmd_ff == SCR1_IALU_CMD_REM)   | (exu2ialu_cmd_ff == SCR1_IALU_CMD_REMU)),
+                   ((exu2ialu_cmd_ff == SCR1_IALU_CMD_REMU)  | (exu2ialu_cmd_ff == SCR1_IALU_CMD_DIVU))};
 
 assign div_ops_are_sgn = ~div_cmd[0];
-assign div_op1_is_neg  = div_ops_are_sgn & exu2ialu_main_op1_i[`SCR1_XLEN-1];
-assign div_op2_is_neg  = div_ops_are_sgn & exu2ialu_main_op2_i[`SCR1_XLEN-1];
+assign div_op1_is_neg  = div_ops_are_sgn & exu2ialu_main_op1_ff[`SCR1_XLEN-1];
+assign div_op2_is_neg  = div_ops_are_sgn & exu2ialu_main_op2_ff[`SCR1_XLEN-1];
 
 always_comb begin
     div_res_rem_c = '0;
@@ -488,7 +551,7 @@ end
 // Dividend low part register
 //------------------------------------------------------------------------------
 
-assign div_dvdnd_lo_upd = exu2ialu_rvm_cmd_vd_i & ~ialu2exu_rvm_res_rdy_o;
+assign div_dvdnd_lo_upd = exu2ialu_rvm_cmd_vd_ff & ~ialu2exu_rvm_res_rdy_i;
 
 always_ff @(posedge clk) begin
     if (div_dvdnd_lo_upd) begin
@@ -497,7 +560,7 @@ always_ff @(posedge clk) begin
 end
 
 assign div_dvdnd_lo_next = (~mdu_cmd_div | mdu_fsm_corr) ? '0
-                         : mdu_fsm_idle                  ? exu2ialu_main_op1_i << 1
+                         : mdu_fsm_idle                  ? exu2ialu_main_op1_ff << 1
                                                          : div_dvdnd_lo_ff     << 1;
 
 //-------------------------------------------------------------------------------
@@ -520,18 +583,10 @@ always_comb begin
             inv         = div_ops_are_sgn & main_ops_diff_sgn;
             mdu_sum_sub = ~inv ^ sgn;
             mdu_sum_op1 = mdu_fsm_corr ? $signed({1'b0, mdu_res_hi_ff})
-                        : mdu_fsm_idle ? $signed({div_op1_is_neg, exu2ialu_main_op1_i[`SCR1_XLEN-1]})
+                        : mdu_fsm_idle ? $signed({div_op1_is_neg, exu2ialu_main_op1_ff[`SCR1_XLEN-1]})
                                        : $signed({mdu_res_hi_ff, div_dvdnd_lo_ff[`SCR1_XLEN-1]});
-            mdu_sum_op2 = $signed({div_op2_is_neg, exu2ialu_main_op2_i});
+            mdu_sum_op2 = $signed({div_op2_is_neg, exu2ialu_main_op2_ff});
         end
-`ifndef SCR1_FAST_MUL
-        SCR1_IALU_MDU_MUL : begin
-            mdu_sum_op1 = mdu_fsm_idle
-                        ? '0
-                        : $signed({(mul_op1_is_sgn & mdu_res_hi_ff[`SCR1_XLEN-1]), mdu_res_hi_ff});
-            mdu_sum_op2 = mul_part_prod;
-        end
-`endif // SCR1_FAST_MUL
         default : begin end
     endcase
     mdu_sum_res = mdu_sum_sub
@@ -543,7 +598,7 @@ end
 // MUL/DIV intermediate results registers
 //-------------------------------------------------------------------------------
 
-assign mdu_res_upd = exu2ialu_rvm_cmd_vd_i & ~ialu2exu_rvm_res_rdy_o;
+assign mdu_res_upd = exu2ialu_rvm_cmd_vd_ff & ~ialu2exu_rvm_res_rdy_i;
 
 always_ff @(posedge clk) begin
     if (mdu_res_upd) begin
@@ -555,14 +610,8 @@ end
 
 assign mdu_res_c_next  = mdu_cmd_div ? div_res_rem_c : mdu_res_c_ff;
 assign mdu_res_hi_next = mdu_cmd_div ? div_res_rem
- `ifndef SCR1_FAST_MUL
-                       : mdu_cmd_mul ? mul_res_hi
- `endif // SCR1_FAST_MUL
                                      : mdu_res_hi_ff;
 assign mdu_res_lo_next = mdu_cmd_div ? div_res_quo
- `ifndef SCR1_FAST_MUL
-                       : mdu_cmd_mul ? mul_res_lo
- `endif // SCR1_FAST_MUL
                                      : mdu_res_lo_ff;
 `endif // SCR1_RVM_EXT
 
@@ -571,56 +620,66 @@ assign mdu_res_lo_next = mdu_cmd_div ? div_res_quo
 //-------------------------------------------------------------------------------
 
 always_comb begin
-    ialu2exu_main_res_o    = '0;
-    ialu2exu_cmp_res_o     = 1'b0;
-`ifdef SCR1_RVM_EXT
-    ialu2exu_rvm_res_rdy_o = 1'b1;
-`endif // SCR1_RVM_EXT
+    ialu2exu_main_res_i    = '0;
+    ialu2exu_cmp_res_i     = 1'b0;
+    ialu2exu_rvm_res_rdy_i = 1'b0;
 
-    case (exu2ialu_cmd_i)
+    case (exu2ialu_cmd_ff)
         SCR1_IALU_CMD_AND : begin
-            ialu2exu_main_res_o = exu2ialu_main_op1_i & exu2ialu_main_op2_i;
+            ialu2exu_rvm_res_rdy_i = ialu_rdy;
+            ialu2exu_main_res_i = exu2ialu_main_op1_ff & exu2ialu_main_op2_ff;
         end
         SCR1_IALU_CMD_OR : begin
-            ialu2exu_main_res_o = exu2ialu_main_op1_i | exu2ialu_main_op2_i;
+            ialu2exu_rvm_res_rdy_i = ialu_rdy;
+            ialu2exu_main_res_i = exu2ialu_main_op1_ff | exu2ialu_main_op2_ff;
         end
         SCR1_IALU_CMD_XOR : begin
-            ialu2exu_main_res_o = exu2ialu_main_op1_i ^ exu2ialu_main_op2_i;
+            ialu2exu_rvm_res_rdy_i = ialu_rdy;
+            ialu2exu_main_res_i = exu2ialu_main_op1_ff ^ exu2ialu_main_op2_ff;
         end
         SCR1_IALU_CMD_ADD : begin
-            ialu2exu_main_res_o = main_sum_res[`SCR1_XLEN-1:0];
+            ialu2exu_rvm_res_rdy_i = ialu_rdy;
+            ialu2exu_main_res_i = main_sum_res[`SCR1_XLEN-1:0];
         end
         SCR1_IALU_CMD_SUB : begin
-            ialu2exu_main_res_o = main_sum_res[`SCR1_XLEN-1:0];
+            ialu2exu_rvm_res_rdy_i = ialu_rdy;
+            ialu2exu_main_res_i = main_sum_res[`SCR1_XLEN-1:0];
         end
         SCR1_IALU_CMD_SUB_LT : begin
-            ialu2exu_main_res_o = `SCR1_XLEN'(main_sum_flags.s ^ main_sum_flags.o);
-            ialu2exu_cmp_res_o  = main_sum_flags.s ^ main_sum_flags.o;
+            ialu2exu_rvm_res_rdy_i = ialu_rdy;
+            ialu2exu_main_res_i = `SCR1_XLEN'(main_sum_flags.s ^ main_sum_flags.o);
+            ialu2exu_cmp_res_i  = main_sum_flags.s ^ main_sum_flags.o;
         end
         SCR1_IALU_CMD_SUB_LTU : begin
-            ialu2exu_main_res_o = `SCR1_XLEN'(main_sum_flags.c);
-            ialu2exu_cmp_res_o  = main_sum_flags.c;
+            ialu2exu_rvm_res_rdy_i = ialu_rdy;
+            ialu2exu_main_res_i = `SCR1_XLEN'(main_sum_flags.c);
+            ialu2exu_cmp_res_i  = main_sum_flags.c;
         end
         SCR1_IALU_CMD_SUB_EQ : begin
-            ialu2exu_main_res_o = `SCR1_XLEN'(main_sum_flags.z);
-            ialu2exu_cmp_res_o  = main_sum_flags.z;
+            ialu2exu_rvm_res_rdy_i = ialu_rdy;
+            ialu2exu_main_res_i = `SCR1_XLEN'(main_sum_flags.z);
+            ialu2exu_cmp_res_i  = main_sum_flags.z;
         end
         SCR1_IALU_CMD_SUB_NE : begin
-            ialu2exu_main_res_o = `SCR1_XLEN'(~main_sum_flags.z);
-            ialu2exu_cmp_res_o  = ~main_sum_flags.z;
+            ialu2exu_rvm_res_rdy_i = ialu_rdy;
+            ialu2exu_main_res_i = `SCR1_XLEN'(~main_sum_flags.z);
+            ialu2exu_cmp_res_i  = ~main_sum_flags.z;
         end
         SCR1_IALU_CMD_SUB_GE : begin
-            ialu2exu_main_res_o = `SCR1_XLEN'(~(main_sum_flags.s ^ main_sum_flags.o));
-            ialu2exu_cmp_res_o  = ~(main_sum_flags.s ^ main_sum_flags.o);
+            ialu2exu_rvm_res_rdy_i = ialu_rdy;
+            ialu2exu_main_res_i = `SCR1_XLEN'(~(main_sum_flags.s ^ main_sum_flags.o));
+            ialu2exu_cmp_res_i  = ~(main_sum_flags.s ^ main_sum_flags.o);
         end
         SCR1_IALU_CMD_SUB_GEU : begin
-            ialu2exu_main_res_o = `SCR1_XLEN'(~main_sum_flags.c);
-            ialu2exu_cmp_res_o  = ~main_sum_flags.c;
+            ialu2exu_rvm_res_rdy_i = ialu_rdy;
+            ialu2exu_main_res_i = `SCR1_XLEN'(~main_sum_flags.c);
+            ialu2exu_cmp_res_i  = ~main_sum_flags.c;
         end
         SCR1_IALU_CMD_SLL,
         SCR1_IALU_CMD_SRL,
         SCR1_IALU_CMD_SRA: begin
-            ialu2exu_main_res_o = shft_res;
+            ialu2exu_rvm_res_rdy_i = ialu_rdy;
+            ialu2exu_main_res_i = shft_res;
         end
 `ifdef SCR1_RVM_EXT
         SCR1_IALU_CMD_MUL,
@@ -628,20 +687,15 @@ always_comb begin
         SCR1_IALU_CMD_MULHSU,
         SCR1_IALU_CMD_MULH : begin
  `ifdef SCR1_FAST_MUL
-            ialu2exu_main_res_o = mul_cmd_hi
+            ialu2exu_rvm_res_rdy_i = ialu_rdy;
+            ialu2exu_main_res_i = mul_cmd_hi
                                 ? mul_res[SCR1_MUL_RES_WIDTH-1:`SCR1_XLEN]
                                 : mul_res[`SCR1_XLEN-1:0];
  `else // ~SCR1_FAST_MUL
-            case (mdu_fsm_ff)
-                SCR1_IALU_MDU_FSM_IDLE : begin
-                    ialu2exu_main_res_o    = '0;
-                    ialu2exu_rvm_res_rdy_o = ~mdu_iter_req;
-                end
-                SCR1_IALU_MDU_FSM_ITER : begin
-                    ialu2exu_main_res_o    = mul_cmd_hi ? mul_res_hi : mul_res_lo;
-                    ialu2exu_rvm_res_rdy_o = mdu_iter_rdy;
-                end
-            endcase
+            ialu2exu_rvm_res_rdy_i = mul_rdy;
+            ialu2exu_main_res_i = mul_cmd_hi
+                                ? mul_res[SCR1_MUL_RES_WIDTH-1:`SCR1_XLEN]
+                                : mul_res[`SCR1_XLEN-1:0];
  `endif // ~SCR1_FAST_MUL
         end
         SCR1_IALU_CMD_DIV,
@@ -650,20 +704,20 @@ always_comb begin
         SCR1_IALU_CMD_REMU : begin
             case (mdu_fsm_ff)
                 SCR1_IALU_MDU_FSM_IDLE : begin
-                    ialu2exu_main_res_o    = (|exu2ialu_main_op2_i | div_cmd_rem)
-                                           ? exu2ialu_main_op1_i
+                    ialu2exu_main_res_i    = (|exu2ialu_main_op2_ff | div_cmd_rem)
+                                           ? exu2ialu_main_op1_ff
                                            : '1;
-                    ialu2exu_rvm_res_rdy_o = ~mdu_iter_req;
+                    ialu2exu_rvm_res_rdy_i = ~mdu_iter_req;
                 end
                 SCR1_IALU_MDU_FSM_ITER : begin
-                    ialu2exu_main_res_o    = div_cmd_rem ? div_res_rem : div_res_quo;
-                    ialu2exu_rvm_res_rdy_o = mdu_iter_rdy & ~mdu_corr_req;
+                    ialu2exu_main_res_i    = div_cmd_rem ? div_res_rem : div_res_quo;
+                    ialu2exu_rvm_res_rdy_i = mdu_iter_rdy & ~mdu_corr_req;
                 end
                 SCR1_IALU_MDU_FSM_CORR : begin
-                    ialu2exu_main_res_o    = div_cmd_rem
+                    ialu2exu_main_res_i    = div_cmd_rem
                                            ? mdu_sum_res[`SCR1_XLEN-1:0]
                                            : -mdu_res_lo_ff[`SCR1_XLEN-1:0];
-                    ialu2exu_rvm_res_rdy_o = 1'b1;
+                    ialu2exu_rvm_res_rdy_i = 1'b1;
                 end
             endcase
         end
@@ -684,31 +738,31 @@ end
 
 SCR1_SVA_IALU_XCHECK : assert property (
     @(negedge clk) disable iff (~rst_n)
-    !$isunknown({exu2ialu_rvm_cmd_vd_i, mdu_fsm_ff})
+    !$isunknown({exu2ialu_rvm_cmd_vd_ff, mdu_fsm_ff})
     ) else $error("IALU Error: unknown values");
 
 SCR1_SVA_IALU_XCHECK_QUEUE : assert property (
     @(negedge clk) disable iff (~rst_n)
-    exu2ialu_rvm_cmd_vd_i |->
-    !$isunknown({exu2ialu_main_op1_i, exu2ialu_main_op2_i, exu2ialu_cmd_i})
+    exu2ialu_rvm_cmd_vd_ff |->
+    !$isunknown({exu2ialu_main_op1_ff, exu2ialu_main_op2_ff, exu2ialu_cmd_ff})
     ) else $error("IALU Error: unknown values in queue");
 
 // Behavior checks
 
 SCR1_SVA_IALU_ILL_STATE : assert property (
     @(negedge clk) disable iff (~rst_n)
-    $onehot0({~exu2ialu_rvm_cmd_vd_i, mdu_fsm_iter, mdu_fsm_corr})
+    $onehot0({~exu2ialu_rvm_cmd_vd_ff, mdu_fsm_iter, mdu_fsm_corr})
     ) else $error("IALU Error: illegal state");
 
 `ifndef VERILATOR    
 SCR1_SVA_IALU_JUMP_FROM_IDLE : assert property (
     @(negedge clk) disable iff (~rst_n)
-    (mdu_fsm_idle & (~exu2ialu_rvm_cmd_vd_i | ~mdu_iter_req)) |=> mdu_fsm_idle
+    (mdu_fsm_idle & (~exu2ialu_rvm_cmd_vd_ff | ~mdu_iter_req)) |=> mdu_fsm_idle
     ) else $error("EXU Error: illegal jump from IDLE state");
 
 SCR1_SVA_IALU_IDLE_TO_ITER : assert property (
     @(negedge clk) disable iff (~rst_n)
-    (mdu_fsm_idle & exu2ialu_rvm_cmd_vd_i & mdu_iter_req) |=> mdu_fsm_iter
+    (mdu_fsm_idle & exu2ialu_rvm_cmd_vd_ff & mdu_iter_req) |=> mdu_fsm_iter
     ) else $error("EXU Error: illegal change state form IDLE to ITER");
 
 SCR1_SVA_IALU_JUMP_FROM_ITER : assert property (

@@ -27,7 +27,7 @@ initial begin
 
 
 end
-
+/***
 // Debug message - dinesh A
  logic [`SCR1_DMEM_AWIDTH-1:0]           core2imem_addr_o_r;           // DMEM address
  logic [`SCR1_DMEM_AWIDTH-1:0]           core2dmem_addr_o_r;           // DMEM address
@@ -51,7 +51,7 @@ end
      if((`RISC_CORE.dmem2core_resp_i !=0) && !core2dmem_cmd_o_r)
            $display("RISCV-DEBUG => DMEM ADDRESS: %x READ Data : %x Resonse: %x", core2dmem_addr_o_r,`RISC_CORE.dmem2core_rdata_i,`RISC_CORE.dmem2core_resp_i);
  end
-
+**/
 
 
 always_ff @(posedge clk) begin

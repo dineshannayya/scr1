@@ -57,3 +57,11 @@
                          	modified:   src/top/scr1_top_ahb.sv
                          	modified:   src/top/scr1_top_axi.sv
 
+
+19-July 2021 - Dinesh.A - 1. Modfy the multi logic with 8 staged logic due to timing reason
+        new file:   src/core/pipeline/scr1_pipe_mul.sv
+        modified:   src/core.files
+	modified:   src/core/pipeline/scr1_pipe_ialu.sv
+	modified:   src/includes/scr1_arch_description.svh
+	modified:   src/tb/scr1_top_tb_runtests.sv
+
