@@ -25,6 +25,7 @@
 ////                                                              ////
 ////  Description:                                                ////
 ////    32x32 Multiplier with 8 stage pipe line for timing reason ////
+////    Support signed multiplication, bit[32] indicate sign      ////
 ////                                                              ////
 ////  To Do:                                                      ////
 ////    nothing                                                   ////
@@ -68,16 +69,17 @@ module scr1_pipe_mul (
 	input   logic [32:0] Din2,         // second operand
 	output  logic [31:0] des_hig,      // first result
 	output  logic [31:0] des_low,      // second result
-	output  logic        mul_rdy_o     // Multiply result ready
+	output  logic        mul_rdy_o,    // Multiply result ready
+	input   logic        data_done     // Result processing complete indication
     );
 
 parameter WAIT_CMD      = 2'b00; // Accept command and Do Signed to unsigned
-parameter WAIT_COMP     = 2'b10; // Wait for COMPUTATION
-parameter WAIT_DONE     = 2'b01; // Do Signed to Unsigned conversion 
+parameter WAIT_COMP     = 2'b01; // Wait for COMPUTATION
+parameter WAIT_DONE     = 2'b10; // Do Signed to Unsigned conversion 
+parameter WAIT_EXIT     = 2'b11; // Wait for Data Completion
 
 // wires
 logic [64:0] tmp_mul1, tmp_mul, shifted;
-logic    data_valid_i;
 logic [31:0] src1,src2; // Unsigned number
 
 // real registers
@@ -103,7 +105,6 @@ assign des_low = mul_result[31:0];
 always_ff @(posedge clk or negedge rstn)
 begin
    if (!rstn) begin
-      data_valid_i <= '0;
       state        <= WAIT_CMD;
       cycle        <= 3'b0;
       mul_result   <= 65'b0;
@@ -111,7 +112,6 @@ begin
       src1         <= 32'h0;
       src2         <= 32'h0;
    end else begin
-     data_valid_i <= data_valid; // for edge detection
      cycle        <= next_cycle;
      state        <= next_state;
 
@@ -139,7 +139,7 @@ begin
      next_state   = state;
      mul_next     = mul_result;
      case(state)
-     WAIT_CMD: if(data_valid && !data_valid_i)  begin // Start only on active High Edge
+     WAIT_CMD: if(data_valid)  begin // Start only on active High Edge
 	     mul_next   = tmp_mul;
 	     next_cycle = 0;
 	     next_state = WAIT_COMP;
@@ -155,11 +155,14 @@ begin
 	      next_cycle = cycle +1;
 	   end
 	end
-     WAIT_DONE:  
-	begin
+     WAIT_DONE:  begin
            mul_rdy_i = 1'b1;
-	   next_state  = WAIT_CMD;
+	   next_state  = WAIT_EXIT;
 	end
+	WAIT_EXIT: begin
+	    if(data_done) // Wait for data completion command
+	       next_state  = WAIT_CMD;
+	end	
     endcase
 end
 

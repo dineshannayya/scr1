@@ -127,31 +127,13 @@ logic        [`SCR1_XLEN-1:0]               shft_res;           // SHIFT result
 
 // MUL/DIV signals
 `ifdef SCR1_RVM_EXT
-// MUL/DIV FSM control signals
-logic                                       mdu_cmd_is_iter;    // MDU Command is iterative
-logic                                       mdu_iter_req;       // Request iterative stage
-logic                                       mdu_iter_rdy;       // Iteration is ready
-logic                                       mdu_corr_req;       // DIV/REM(U) correction request
-logic                                       div_corr_req;       // Correction request for DIV operation
-logic                                       rem_corr_req;       // Correction request for REM(U) operations
-
-// MUL/DIV FSM signals
-logic [1:0]                                 mdu_fsm_ff;         // Current FSM state
-logic [1:0]                                 mdu_fsm_next;       // Next FSM state
-logic                                       mdu_fsm_idle;       // MDU FSM is in IDLE state
-`ifdef SCR1_TRGT_SIMULATION
-logic                                       mdu_fsm_iter;       // MDU FSM is in ITER state
-`endif // SCR1_TRGT_SIMULATION
-logic                                       mdu_fsm_corr;       // MDU FSM is in CORR state
 
 // MDU command signals
-logic [1:0]                                 mdu_cmd;            // MDU command: 00 - NONE, 01 - MUL,  10 - DIV
 logic                                       mdu_cmd_mul;        // MDU command is MUL(HSU)
 logic                                       mdu_cmd_div;        // MDU command is DIV(U)/REM(U)
 logic        [1:0]                          mul_cmd;            // MUL command: 00 - MUL,  01 - MULH, 10 - MULHSU, 11 - MULHU
 logic                                       mul_cmd_hi;         // High part of MUL result is requested
 logic        [1:0]                          div_cmd;            // DIV command: 00 - DIV,  01 - DIVU, 10 - REM,    11 - REMU
-logic                                       div_cmd_div;        // DIV command is DIV
 logic                                       div_cmd_rem;        // DIV command is REM(U)
 
 // Multiplier signals
@@ -164,36 +146,15 @@ logic signed [SCR1_MUL_WIDTH:0]             mul_op2;            // MUL operand 1
 logic signed [SCR1_MUL_RES_WIDTH-1:0]       mul_res;            // MUL result
 
 // Divisor signals
+logic signed [`SCR1_XLEN:0]                 div_op1;            // DIV operand 1
+logic signed [SCR1_MUL_WIDTH:0]             div_op2;            // DIV operand 2
 logic                                       div_ops_are_sgn;
 logic                                       div_op1_is_neg;
 logic                                       div_op2_is_neg;
-logic                                       div_res_rem_c;
 logic        [`SCR1_XLEN-1:0]               div_res_rem;
 logic        [`SCR1_XLEN-1:0]               div_res_quo;
-logic                                       div_quo_bit;
-logic                                       div_dvdnd_lo_upd;
-logic        [`SCR1_XLEN-1:0]               div_dvdnd_lo_ff;
-logic        [`SCR1_XLEN-1:0]               div_dvdnd_lo_next;
 
-// MDU adder signals
-logic                                       mdu_sum_sub;        // MDU adder operation: 0 - add, 1 - sub
-logic signed [SCR1_MDU_SUM_WIDTH-1:0]       mdu_sum_op1;        // MDU adder operand 1
-logic signed [SCR1_MDU_SUM_WIDTH-1:0]       mdu_sum_op2;        // MDU adder operand 2
-logic signed [SCR1_MDU_SUM_WIDTH-1:0]       mdu_sum_res;        // MDU adder result
 
-// MDU iteration counter signals
-logic                                       mdu_iter_cnt_en;
-logic        [`SCR1_XLEN-1:0]               mdu_iter_cnt;
-logic        [`SCR1_XLEN-1:0]               mdu_iter_cnt_next;
-
-// Intermediate results registers
-logic                                       mdu_res_upd;
-logic                                       mdu_res_c_ff;
-logic                                       mdu_res_c_next;
-logic        [`SCR1_XLEN-1:0]               mdu_res_hi_ff;
-logic        [`SCR1_XLEN-1:0]               mdu_res_hi_next;
-logic        [`SCR1_XLEN-1:0]               mdu_res_lo_ff;
-logic        [`SCR1_XLEN-1:0]               mdu_res_lo_next;
 `endif // SCR1_RVM_EXT
 
 
@@ -207,7 +168,8 @@ logic                           exu2ialu_rvm_cmd_vd_ff;      // MUL/DIV command 
 logic [`SCR1_XLEN-1:0]          ialu2exu_main_res_i;        // main ALU result
 logic                           ialu2exu_cmp_res_i;         // IALU comparison result
 logic                           ialu2exu_rvm_res_rdy_i;     // MUL/DIV result ready
-logic                           ialu_rdy        ;  // ialu ready
+logic                           ialu_rdy        ;           // ialu ready
+logic                           ialu_data_pdone ;           // ialu data process done
 
 `ifdef SCR1_GOLDEN
 assign	exu2ialu_main_op1_ff = exu2ialu_main_op1_i;
@@ -241,10 +203,12 @@ end
 
 always_ff @(posedge clk, negedge rst_n) begin
     if (~rst_n) begin
-	ialu2exu_main_res_o <= '0;
-        ialu2exu_cmp_res_o <= '0;
+	ialu2exu_main_res_o         <= '0;
+        ialu2exu_cmp_res_o          <= '0;
         ialu2exu_rvm_res_rdy_o      <= '0;
+	ialu_data_pdone             <= '0;
     end else begin
+	ialu_data_pdone             <= ialu2exu_rvm_res_rdy_o; // generate one cycle delayed process done
 	ialu2exu_main_res_o         <= ialu2exu_main_res_i;
         ialu2exu_cmp_res_o          <= ialu2exu_cmp_res_i;
         ialu2exu_rvm_res_rdy_o      <= ialu2exu_rvm_res_rdy_i;
@@ -369,99 +333,28 @@ assign mdu_cmd_mul = (exu2ialu_cmd_ff == SCR1_IALU_CMD_MUL)
                    | (exu2ialu_cmd_ff == SCR1_IALU_CMD_MULHU)
                    | (exu2ialu_cmd_ff == SCR1_IALU_CMD_MULHSU);
 
-assign mdu_cmd     = mdu_cmd_div ? SCR1_IALU_MDU_DIV
-                                 : SCR1_IALU_MDU_NONE;
 
 assign main_ops_non_zero = |exu2ialu_main_op1_ff & |exu2ialu_main_op2_ff;
 assign main_ops_diff_sgn = exu2ialu_main_op1_ff[`SCR1_XLEN-1]
                          ^ exu2ialu_main_op2_ff[`SCR1_XLEN-1];
 
-assign mdu_cmd_is_iter = mdu_cmd_div;
 
-assign mdu_iter_req = mdu_cmd_is_iter ? (main_ops_non_zero & mdu_fsm_idle) : 1'b0;
-assign mdu_iter_rdy = mdu_iter_cnt[0];
 
-assign div_cmd_div = (div_cmd == 2'b00);
 assign div_cmd_rem = div_cmd[1];
 
-// Correction request signals
-assign div_corr_req = div_cmd_div & main_ops_diff_sgn;
-assign rem_corr_req = div_cmd_rem & |div_res_rem & (div_op1_is_neg ^ div_res_rem_c);
-assign mdu_corr_req = mdu_cmd_div & (div_corr_req | rem_corr_req);
 
-// MDU iteration counter
-//------------------------------------------------------------------------------
-
-assign mdu_iter_cnt_en = exu2ialu_rvm_cmd_vd_ff & ~ialu2exu_rvm_res_rdy_i;
-
-always_ff @(posedge clk) begin
-    if (mdu_iter_cnt_en) begin
-        mdu_iter_cnt <= mdu_iter_cnt_next;
-    end
-end
-
-assign mdu_iter_cnt_next = ~mdu_fsm_idle ? mdu_iter_cnt >> 1
-                         : mdu_cmd_div   ? SCR1_DIV_CNT_INIT
-                                         : mdu_iter_cnt;
-
-//-------------------------------------------------------------------------------
-// MUL/DIV FSM
-//-------------------------------------------------------------------------------
-
-always_ff @(posedge clk, negedge rst_n) begin
-    if (~rst_n) begin
-        mdu_fsm_ff <= SCR1_IALU_MDU_FSM_IDLE;
-    end else begin
-        mdu_fsm_ff <= mdu_fsm_next;
-    end
-end
-
-always_comb begin
-    mdu_fsm_next = SCR1_IALU_MDU_FSM_IDLE;
-
-    if (exu2ialu_rvm_cmd_vd_ff) begin
-        case (mdu_fsm_ff)
-            SCR1_IALU_MDU_FSM_IDLE : begin
-                mdu_fsm_next = mdu_iter_req  ? SCR1_IALU_MDU_FSM_ITER
-                                             : SCR1_IALU_MDU_FSM_IDLE;
-            end
-            SCR1_IALU_MDU_FSM_ITER : begin
-                mdu_fsm_next = ~mdu_iter_rdy ? SCR1_IALU_MDU_FSM_ITER
-                             : mdu_corr_req  ? SCR1_IALU_MDU_FSM_CORR
-                                             : SCR1_IALU_MDU_FSM_IDLE;
-            end
-            SCR1_IALU_MDU_FSM_CORR : begin
-                mdu_fsm_next = SCR1_IALU_MDU_FSM_IDLE;
-            end
-        endcase
-    end
-end
-
-assign mdu_fsm_idle = (mdu_fsm_ff == SCR1_IALU_MDU_FSM_IDLE);
-`ifdef SCR1_TRGT_SIMULATION
-assign mdu_fsm_iter = (mdu_fsm_ff == SCR1_IALU_MDU_FSM_ITER);
-`endif // SCR1_TRGT_SIMULATION
-assign mdu_fsm_corr = (mdu_fsm_ff == SCR1_IALU_MDU_FSM_CORR);
 
 //-------------------------------------------------------------------------------
 // Multiplier logic
 //-------------------------------------------------------------------------------
 //
- // Multiplication has 2 options: fast (1 cycle) and Radix-2 (32 cycles) multiplication.
+ // Multiplication has 2 options: fast (1 cycle) and Radix-2 (8 cycles) multiplication.
  //
  // 1. Fast multiplication uses the straightforward approach when 2 operands are
  // multiplied in one cycle
  //
- // 2. Radix-2 multiplication uses 2 registers (high and low part of multiplication)
+ // 2. Radix-2 multiplication does 4bit multication at time
  //
- // Radix-2 algorithm:
- // 1. Initialize registers
- // 2. Create a partial product by multiplying multiplicand by the LSB of multiplier
- // 3. Add the partial product to the previous (intermediate) value of multiplication
- //    result (stored into high and low parts of multiplication result register)
- // 4. Shift the low part of multiplication result register right
- // 4. Store the addition result into the high part of multiplication result register
- // 6. If iteration is not ready, go to step 2. Otherwise multiplication is done
  //
 //
 
@@ -493,37 +386,18 @@ scr1_pipe_mul u_mul(
 	.Din2         (mul_op2),       // second operand
 	.des_hig      (mul_res[SCR1_MUL_RES_WIDTH-1:`SCR1_XLEN]),    // first result
 	.des_low      (mul_res[`SCR1_XLEN-1:0]),    // second result
-	.mul_rdy_o    (mul_rdy)      // Multiply result ready
+	.mul_rdy_o    (mul_rdy),      // Multiply result ready
+	.data_done    (ialu_data_pdone)    // data_process_done
     );
 
 
 `endif // ~SCR1_FAST_MUL
 
+
+
 //-------------------------------------------------------------------------------
 // Divider logic
 //-------------------------------------------------------------------------------
-//
- // Division uses a non-restoring algorithm. 3 registers are used:
- // - Remainder register
- // - Quotient register
- // - Dividend low part register (for corner case quotient bit calculation)
- //
- // Algorithm:
- // 1. Initialize registers
- // 2. Shift remainder and dividend low part registers left
- // 3. Compare remainder register with the divisor (taking previous quotient bit
- //    and operands signs into account) and calculate quotient bit based on the
- //    comparison results
- // 4. Shift quotient register left, append quotient bit to the quotient register
- // 5. If iteration is not ready, go to step 2. Otherwise go to step 6
- // 6. Do correction if necessary, otherwise division is done
- //
- // Quotient bit calculation has a corner case:
- // When dividend is negative result carry bit check takes into account only
- // the case of remainder register been greater than divisor. To handle
- // equality case we should check if both the comparison result and the
- // lower part of dividend are zero
-//
 
 assign div_cmd  = {((exu2ialu_cmd_ff == SCR1_IALU_CMD_REM)   | (exu2ialu_cmd_ff == SCR1_IALU_CMD_REMU)),
                    ((exu2ialu_cmd_ff == SCR1_IALU_CMD_REMU)  | (exu2ialu_cmd_ff == SCR1_IALU_CMD_DIVU))};
@@ -532,87 +406,24 @@ assign div_ops_are_sgn = ~div_cmd[0];
 assign div_op1_is_neg  = div_ops_are_sgn & exu2ialu_main_op1_ff[`SCR1_XLEN-1];
 assign div_op2_is_neg  = div_ops_are_sgn & exu2ialu_main_op2_ff[`SCR1_XLEN-1];
 
-always_comb begin
-    div_res_rem_c = '0;
-    div_res_rem   = '0;
-    div_res_quo   = '0;
-    div_quo_bit   = 1'b0;
-    if (mdu_cmd_div & ~mdu_fsm_corr) begin
-        div_res_rem_c = mdu_sum_res[SCR1_MDU_SUM_WIDTH-1];
-        div_res_rem   = mdu_sum_res[SCR1_MDU_SUM_WIDTH-2:0];
-        div_quo_bit   = ~(div_op1_is_neg ^ div_res_rem_c)
-                      | (div_op1_is_neg & ({mdu_sum_res, div_dvdnd_lo_next} == '0));
-        div_res_quo   = mdu_fsm_idle
-                      ? {'0, div_quo_bit}
-                      : {mdu_res_lo_ff[`SCR1_XLEN-2:0], div_quo_bit};
-    end
-end
+assign div_op1 = mdu_cmd_div ? $signed({div_op1_is_neg, exu2ialu_main_op1_ff}) : '0;
+assign div_op2 = mdu_cmd_div ? $signed({div_op2_is_neg, exu2ialu_main_op2_ff}) : '0;
 
-// Dividend low part register
-//------------------------------------------------------------------------------
+logic div_rdy;
 
-assign div_dvdnd_lo_upd = exu2ialu_rvm_cmd_vd_ff & ~ialu2exu_rvm_res_rdy_i;
+scr1_pipe_div u_div(
+	.clk          (clk), 
+	.rstn         (rst_n), 
+	.data_valid   (mdu_cmd_div),   // input valid
+	.Din1         (div_op1),       // first operand
+	.Din2         (div_op2),       // second operand
+	.quotient     (div_res_quo),   // Remainder
+	.remainder    (div_res_rem),   // Quotient
+	.div_rdy_o    (div_rdy),       // Divide result ready
+	.data_done    (ialu_data_pdone)     // data_process_done
+    );
 
-always_ff @(posedge clk) begin
-    if (div_dvdnd_lo_upd) begin
-        div_dvdnd_lo_ff <= div_dvdnd_lo_next;
-    end
-end
 
-assign div_dvdnd_lo_next = (~mdu_cmd_div | mdu_fsm_corr) ? '0
-                         : mdu_fsm_idle                  ? exu2ialu_main_op1_ff << 1
-                                                         : div_dvdnd_lo_ff     << 1;
-
-//-------------------------------------------------------------------------------
-// MDU adder
-//-------------------------------------------------------------------------------
-logic           sgn;
-logic           inv;
-
-always_comb begin
-    mdu_sum_sub    = 1'b0;
-    mdu_sum_op1    = '0;
-    mdu_sum_op2    = '0;
-    sgn            = '0; // yosys - latch fix
-    inv            = '0; // yosys - latch fix
-    case (mdu_cmd)
-        SCR1_IALU_MDU_DIV : begin
-            sgn         = mdu_fsm_corr ? div_op1_is_neg ^ mdu_res_c_ff
-                        : mdu_fsm_idle ? 1'b0
-                                       : ~mdu_res_lo_ff[0];
-            inv         = div_ops_are_sgn & main_ops_diff_sgn;
-            mdu_sum_sub = ~inv ^ sgn;
-            mdu_sum_op1 = mdu_fsm_corr ? $signed({1'b0, mdu_res_hi_ff})
-                        : mdu_fsm_idle ? $signed({div_op1_is_neg, exu2ialu_main_op1_ff[`SCR1_XLEN-1]})
-                                       : $signed({mdu_res_hi_ff, div_dvdnd_lo_ff[`SCR1_XLEN-1]});
-            mdu_sum_op2 = $signed({div_op2_is_neg, exu2ialu_main_op2_ff});
-        end
-        default : begin end
-    endcase
-    mdu_sum_res = mdu_sum_sub
-                ? (mdu_sum_op1 - mdu_sum_op2)
-                : (mdu_sum_op1 + mdu_sum_op2);
-end
-
-//-------------------------------------------------------------------------------
-// MUL/DIV intermediate results registers
-//-------------------------------------------------------------------------------
-
-assign mdu_res_upd = exu2ialu_rvm_cmd_vd_ff & ~ialu2exu_rvm_res_rdy_i;
-
-always_ff @(posedge clk) begin
-    if (mdu_res_upd) begin
-        mdu_res_c_ff  <= mdu_res_c_next;
-        mdu_res_hi_ff <= mdu_res_hi_next;
-        mdu_res_lo_ff <= mdu_res_lo_next;
-    end
-end
-
-assign mdu_res_c_next  = mdu_cmd_div ? div_res_rem_c : mdu_res_c_ff;
-assign mdu_res_hi_next = mdu_cmd_div ? div_res_rem
-                                     : mdu_res_hi_ff;
-assign mdu_res_lo_next = mdu_cmd_div ? div_res_quo
-                                     : mdu_res_lo_ff;
 `endif // SCR1_RVM_EXT
 
 //-------------------------------------------------------------------------------
@@ -702,24 +513,8 @@ always_comb begin
         SCR1_IALU_CMD_DIVU,
         SCR1_IALU_CMD_REM,
         SCR1_IALU_CMD_REMU : begin
-            case (mdu_fsm_ff)
-                SCR1_IALU_MDU_FSM_IDLE : begin
-                    ialu2exu_main_res_i    = (|exu2ialu_main_op2_ff | div_cmd_rem)
-                                           ? exu2ialu_main_op1_ff
-                                           : '1;
-                    ialu2exu_rvm_res_rdy_i = ~mdu_iter_req;
-                end
-                SCR1_IALU_MDU_FSM_ITER : begin
-                    ialu2exu_main_res_i    = div_cmd_rem ? div_res_rem : div_res_quo;
-                    ialu2exu_rvm_res_rdy_i = mdu_iter_rdy & ~mdu_corr_req;
-                end
-                SCR1_IALU_MDU_FSM_CORR : begin
-                    ialu2exu_main_res_i    = div_cmd_rem
-                                           ? mdu_sum_res[`SCR1_XLEN-1:0]
-                                           : -mdu_res_lo_ff[`SCR1_XLEN-1:0];
-                    ialu2exu_rvm_res_rdy_i = 1'b1;
-                end
-            endcase
+            ialu2exu_main_res_i    = div_cmd_rem ? div_res_rem : div_res_quo;
+            ialu2exu_rvm_res_rdy_i = div_rdy;
         end
 `endif // SCR1_RVM_EXT
         default : begin end
@@ -736,11 +531,6 @@ end
 
 // X checks
 
-SCR1_SVA_IALU_XCHECK : assert property (
-    @(negedge clk) disable iff (~rst_n)
-    !$isunknown({exu2ialu_rvm_cmd_vd_ff, mdu_fsm_ff})
-    ) else $error("IALU Error: unknown values");
-
 SCR1_SVA_IALU_XCHECK_QUEUE : assert property (
     @(negedge clk) disable iff (~rst_n)
     exu2ialu_rvm_cmd_vd_ff |->
@@ -749,42 +539,6 @@ SCR1_SVA_IALU_XCHECK_QUEUE : assert property (
 
 // Behavior checks
 
-SCR1_SVA_IALU_ILL_STATE : assert property (
-    @(negedge clk) disable iff (~rst_n)
-    $onehot0({~exu2ialu_rvm_cmd_vd_ff, mdu_fsm_iter, mdu_fsm_corr})
-    ) else $error("IALU Error: illegal state");
-
-`ifndef VERILATOR    
-SCR1_SVA_IALU_JUMP_FROM_IDLE : assert property (
-    @(negedge clk) disable iff (~rst_n)
-    (mdu_fsm_idle & (~exu2ialu_rvm_cmd_vd_ff | ~mdu_iter_req)) |=> mdu_fsm_idle
-    ) else $error("EXU Error: illegal jump from IDLE state");
-
-SCR1_SVA_IALU_IDLE_TO_ITER : assert property (
-    @(negedge clk) disable iff (~rst_n)
-    (mdu_fsm_idle & exu2ialu_rvm_cmd_vd_ff & mdu_iter_req) |=> mdu_fsm_iter
-    ) else $error("EXU Error: illegal change state form IDLE to ITER");
-
-SCR1_SVA_IALU_JUMP_FROM_ITER : assert property (
-    @(negedge clk) disable iff (~rst_n)
-    (mdu_fsm_iter & ~mdu_iter_rdy) |=> mdu_fsm_iter
-    ) else $error("EXU Error: illegal jump from ITER state");
-
-SCR1_SVA_IALU_ITER_TO_IDLE : assert property (
-    @(negedge clk) disable iff (~rst_n)
-    (mdu_fsm_iter & mdu_iter_rdy & ~mdu_corr_req) |=> mdu_fsm_idle
-    ) else $error("EXU Error: illegal state change ITER to IDLE");
-
-SCR1_SVA_IALU_ITER_TO_CORR : assert property (
-    @(negedge clk) disable iff (~rst_n)
-    (mdu_fsm_iter & mdu_iter_rdy & mdu_corr_req) |=> mdu_fsm_corr
-    ) else $error("EXU Error: illegal state change ITER to CORR");
-
-SCR1_SVA_IALU_CORR_TO_IDLE : assert property (
-    @(negedge clk) disable iff (~rst_n)
-    mdu_fsm_corr |=> mdu_fsm_idle
-    ) else $error("EXU Error: illegal state stay in CORR");
-`endif // VERILATOR
 
 `endif // SCR1_RVM_EXT
 

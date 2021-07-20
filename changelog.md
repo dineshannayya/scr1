@@ -65,3 +65,9 @@
 	modified:   src/includes/scr1_arch_description.svh
 	modified:   src/tb/scr1_top_tb_runtests.sv
 
+20-July 2021 - Dinesh.A  Modified the divider logic added 16 staged logic is added due to timing reason
+	modified:   src/core.files
+	modified:   src/core/pipeline/scr1_pipe_ialu.sv
+	modified:   src/core/pipeline/scr1_pipe_mul.sv
+        modified:   src/core/pipeline/scr1_pipe_div.sv
+
