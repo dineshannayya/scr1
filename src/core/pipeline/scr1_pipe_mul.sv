@@ -79,7 +79,8 @@ parameter WAIT_DONE     = 2'b10; // Do Signed to Unsigned conversion
 parameter WAIT_EXIT     = 2'b11; // Wait for Data Completion
 
 // wires
-logic [64:0] tmp_mul1, tmp_mul, shifted;
+logic [35:0] tmp_mul1;
+logic [64:0] tmp_mul, shifted;
 logic [31:0] src1,src2; // Unsigned number
 
 // real registers
@@ -88,16 +89,8 @@ logic [63:0] mul_result,mul_next;
 logic [1:0]   state, next_state;
 logic  mul_rdy_i;
 
-assign tmp_mul1 = src1 * (cycle == 3'h0 ? src2[31:28] 
-                       : (cycle == 3'h1) ? src2[27:24]
-                       : (cycle == 3'h2) ? src2[23:20]
-                       : (cycle == 3'h3) ? src2[19:16]
-                       : (cycle == 3'h4) ? src2[15:12]
-                       : (cycle == 3'h5) ? src2[11:8]
-                       : (cycle == 3'h6) ? src2[7:4]
-                       : src2[3:0]);
-
-assign shifted = (cycle == 3'h0 ? 64'h0 : {mul_result[59:0], 4'b0000});
+assign tmp_mul1 = src1 * src2[31:28];
+//assign shifted = (cycle == 3'h0 ? 64'h0 : {mul_result[59:0], 4'b0000});
 assign tmp_mul = tmp_mul1 + shifted;
 assign des_hig = mul_result[63:32];
 assign des_low = mul_result[31:0];
@@ -111,15 +104,18 @@ begin
       mul_rdy_o    <= 1'b0;
       src1         <= 32'h0;
       src2         <= 32'h0;
+      shifted      <= 'h0;
    end else begin
      cycle        <= next_cycle;
      state        <= next_state;
+     shifted      <= {mul_next[59:0], 4'b0000};
 
-     mul_result   <= mul_next;
      mul_rdy_o    <= mul_rdy_i;
      if(data_valid && state== WAIT_CMD ) begin
         src1   <= (Din1[32] == 1'b1) ? (32'hFFFF_FFFF ^ Din1[31:0])+1 : Din1[31:0];
         src2   <= (Din2[32] == 1'b1) ? (32'hFFFF_FFFF ^ Din2[31:0])+1 : Din2[31:0];
+     end else begin
+	src2   <= src2 << 4;
      end
      if(state== WAIT_DONE ) begin
 	// If Number is negative, then do 2's complement
@@ -140,7 +136,7 @@ begin
      mul_next     = mul_result;
      case(state)
      WAIT_CMD: if(data_valid)  begin // Start only on active High Edge
-	     mul_next   = tmp_mul;
+	     mul_next   = 0;
 	     next_cycle = 0;
 	     next_state = WAIT_COMP;
 	 end
