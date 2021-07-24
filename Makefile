@@ -172,8 +172,31 @@ TARGETS += dhrystone21
 # Comment this target if you don't want to run the hello test
 TARGETS += hello
 
+# Comment this target if you don't want to run the hello test
+TARGETS += test
+
 # Targets
-.PHONY: tests run_modelsim run_vcs run_ncsim run_verilator run_verilator_wf
+.PHONY: tests run_iverilog run_modelsim run_modelsim_wlf run_vcs run_ncsim run_verilator run_verilator_wf
+
+default: clean_test_list run_verilator
+
+clean_test_list:
+	rm -f $(test_info)
+
+echo_out: tests
+	@echo "                          Test               | build | simulation " ;
+	@echo "$$(cat $(test_results))"
+
+tests: $(TARGETS)
+
+$(test_info): clean_hex tests
+	cd $(bld_dir)
+
+isr_sample: | $(bld_dir)
+	$(MAKE) -C $(tst_dir)/isr_sample ARCH=$(ARCH) IPIC=$(IPIC) VECT_IRQ=$(VECT_IRQ)
+
+# Targets
+.PHONY: tests run_iverilog run_modelsim run_modelsim_wlf run_vcs run_ncsim run_verilator run_verilator_wf
 
 default: clean_test_list run_verilator
 
@@ -206,6 +229,9 @@ riscv_compliance: | $(bld_dir)
 
 hello: | $(bld_dir)
 	-$(MAKE) -C $(tst_dir)/hello EXT_CFLAGS="$(EXT_CFLAGS)" ARCH=$(ARCH)
+
+test: | $(bld_dir)
+	-$(MAKE) -C $(tst_dir)/test EXT_CFLAGS="$(EXT_CFLAGS)" ARCH=$(ARCH)
 
 clean_hex: | $(bld_dir)
 	$(RM) $(bld_dir)/*.hex
@@ -240,6 +266,34 @@ run_modelsim: $(test_info)
 	printf "                          Test               | build | simulation \n" ; \
 	printf "$$(cat $(test_results)) \n"
 
+run_iverilog: $(test_info)
+	$(MAKE) -C $(root_dir)/sim build_iverilog SIM_CFG_DEF=$(SIM_CFG_DEF) SIM_TRACE_DEF=$(SIM_TRACE_DEF) SIM_BUILD_OPTS=$(SIM_BUILD_OPTS); \
+	printf "" > $(test_results); \
+	cd $(bld_dir); \
+	vvp \
+	+test_info=$(test_info) \
+	+test_results=$(test_results) \
+	+imem_pattern=$(imem_pattern) \
+	+dmem_pattern=$(dmem_pattern) \
+	$(top_module).vvp  | tee $(sim_results)  ;\
+	printf "Simulation performed on $$(vvp -V) \n" ;\
+	printf "                          Test               | build | simulation \n" ; \
+	printf "$$(cat $(test_results)) \n"
+
+run_modelsim_wlf: $(test_info)
+	$(MAKE) -C $(root_dir)/sim build_modelsim_wlf SIM_CFG_DEF=$(SIM_CFG_DEF) SIM_TRACE_DEF=$(SIM_TRACE_DEF) SIM_BUILD_OPTS=$(SIM_BUILD_OPTS); \
+	printf "" > $(test_results); \
+	cd $(bld_dir); \
+	vsim -c -do "run -all" +nowarn3691 \
+	+test_info=$(test_info) \
+	+test_results=$(test_results) \
+	+imem_pattern=$(imem_pattern) \
+	+dmem_pattern=$(dmem_pattern) \
+	work.$(top_module) \
+	$(MODELSIM_OPTS) | tee $(sim_results)  ;\
+	printf "Simulation performed on $$(vsim -version) \n" ;\
+	printf "                          Test               | build | simulation \n" ; \
+	printf "$$(cat $(test_results)) \n"
 run_ncsim: $(test_info)
 	$(MAKE) -C $(root_dir)/sim build_ncsim SIM_CFG_DEF=$(SIM_CFG_DEF) SIM_TRACE_DEF=$(SIM_TRACE_DEF) SIM_BUILD_OPTS=$(SIM_BUILD_OPTS);
 	printf "" > $(test_results);

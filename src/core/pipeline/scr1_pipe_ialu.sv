@@ -171,6 +171,7 @@ logic                           ialu2exu_rvm_res_rdy_i;     // MUL/DIV result re
 logic                           ialu_rdy        ;           // ialu ready
 logic                           ialu_data_pdone ;           // ialu data process done
 
+
 `ifdef SCR1_GOLDEN
 assign	exu2ialu_main_op1_ff = exu2ialu_main_op1_i;
 assign  exu2ialu_main_op2_ff = exu2ialu_main_op2_i;
@@ -324,14 +325,14 @@ end
 // MUL/DIV FSM Control logic
 //-------------------------------------------------------------------------------
 
-assign mdu_cmd_div = (exu2ialu_cmd_ff == SCR1_IALU_CMD_DIV)
+assign mdu_cmd_div = ((exu2ialu_cmd_ff == SCR1_IALU_CMD_DIV)
                    | (exu2ialu_cmd_ff == SCR1_IALU_CMD_DIVU)
                    | (exu2ialu_cmd_ff == SCR1_IALU_CMD_REM)
-                   | (exu2ialu_cmd_ff == SCR1_IALU_CMD_REMU);
-assign mdu_cmd_mul = (exu2ialu_cmd_ff == SCR1_IALU_CMD_MUL)
+                   | (exu2ialu_cmd_ff == SCR1_IALU_CMD_REMU)) & exu2ialu_rvm_cmd_vd_ff;
+assign mdu_cmd_mul = ((exu2ialu_cmd_ff == SCR1_IALU_CMD_MUL)
                    | (exu2ialu_cmd_ff == SCR1_IALU_CMD_MULH)
                    | (exu2ialu_cmd_ff == SCR1_IALU_CMD_MULHU)
-                   | (exu2ialu_cmd_ff == SCR1_IALU_CMD_MULHSU);
+                   | (exu2ialu_cmd_ff == SCR1_IALU_CMD_MULHSU)) & exu2ialu_rvm_cmd_vd_ff;
 
 
 assign main_ops_non_zero = |exu2ialu_main_op1_ff & |exu2ialu_main_op2_ff;
