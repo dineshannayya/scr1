@@ -1,6 +1,6 @@
 src_dir := $(dir $(lastword $(MAKEFILE_LIST)))
 
-c_src := test.c
+c_src := test.c coremark.h
 
 include $(inc_dir)/common.mk
 

@@ -70,4 +70,8 @@
 	modified:   src/core/pipeline/scr1_pipe_ialu.sv
 	modified:   src/core/pipeline/scr1_pipe_mul.sv
         modified:   src/core/pipeline/scr1_pipe_div.sv
+26-July 2021 - Dinesh.A, Modified the 64 Bit additional logic for 2's complement is broken into 32bit addition for timing reason
+	modified:   src/core/pipeline/scr1_pipe_mul.sv
+	modified:   src/top/scr1_timer.sv
+ 
 

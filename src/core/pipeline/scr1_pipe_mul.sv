@@ -34,6 +34,11 @@
 ////      - Dinesh Annayya, dinesha@opencores.org                 ////
 ////                                                              ////
 ////  Revision :                                                  ////
+////          0.1 - 25th July 2021                                ////
+////              Breaking two's completement into two stage for  ////
+////              timing reason, When all lower 32 bit zero and   ////
+////              it's complement will be '1', this will cause    ////
+////              increment in higer bits                         ////
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 ////                                                              ////
@@ -88,6 +93,7 @@ logic [2:0]  cycle,next_cycle;
 logic [63:0] mul_result,mul_next;
 logic [1:0]   state, next_state;
 logic  mul_rdy_i;
+logic  mul_32b_zero_b;
 
 assign tmp_mul1 = src1 * src2[31:28];
 //assign shifted = (cycle == 3'h0 ? 64'h0 : {mul_result[59:0], 4'b0000});
@@ -98,13 +104,14 @@ assign des_low = mul_result[31:0];
 always_ff @(posedge clk or negedge rstn)
 begin
    if (!rstn) begin
-      state        <= WAIT_CMD;
-      cycle        <= 3'b0;
-      mul_result   <= 65'b0;
-      mul_rdy_o    <= 1'b0;
-      src1         <= 32'h0;
-      src2         <= 32'h0;
-      shifted      <= 'h0;
+      state           <= WAIT_CMD;
+      cycle           <= 3'b0;
+      mul_result      <= 65'b0;
+      mul_rdy_o       <= 1'b0;
+      src1            <= 32'h0;
+      src2            <= 32'h0;
+      shifted         <= 'h0;
+      mul_32b_zero_b  <= '0;
    end else begin
      cycle        <= next_cycle;
      state        <= next_state;
@@ -119,11 +126,14 @@ begin
      end
      if(state== WAIT_DONE ) begin
 	// If Number is negative, then do 2's complement
+	// Breaking 2's complement to timing reason
         if(Din1[32] ^ Din2[32]) begin 
-           mul_result <= (64'hFFFF_FFFF_FFFF_FFFF ^ mul_result[63:0]) + 1;
+           mul_result[31:0] <= (32'hFFFF_FFFF ^ mul_result[31:0]) + 1;
+           mul_result[63:32] <= (mul_32b_zero_b == 1'b0) ? (32'hFFFF_FFFF ^ mul_result[63:32]) + 1 : (32'hFFFF_FFFF ^ mul_result[63:32]) ;
 	end
      end else begin
 	mul_result   <= mul_next;
+	mul_32b_zero_b  <= |mul_next[31:0]; // check all bit are zero
      end
    end
 end
