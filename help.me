@@ -17,6 +17,7 @@ git submodule update --init --recursive
 
 #Sign Off Regression
 make run_verilator CFG=MAX BUS=AXI TARGETS="riscv_isa hello dhrystone21 coremark riscv_compliance" TRACE=1
+make run_verilator CFG=MAX BUS=WB TARGETS="riscv_isa hello dhrystone21 coremark riscv_compliance" TRACE=1
 
 # To clean the previous detail
 make clean
@@ -24,3 +25,4 @@ make clean
 #To run only coremark with dump
   make run_verilator_wf CFG=MAX BUS=AXI TRACE=0 TARGETS="coremark"
   make run_verilator CFG=MAX BUS=AXI TRACE=0 TARGETS="coremark"
+  make run_verilator CFG=MAX BUS=WB TRACE=0 TARGETS="coremark"

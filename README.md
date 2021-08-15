@@ -13,7 +13,7 @@ SCR1 is an open-source and free to use RISC-V compatible MCU-class core, designe
 * Optional Integrated Programmable Interrupt Controller with 16 IRQ lines
 * Optional RISC-V Debug subsystem with JTAG interface
 * Optional on-chip Tightly-Coupled Memory
-* 32-bit AXI4/AHB-Lite external interface
+* 32-bit AXI4/AHB-Lite & Wishbone external interface
 * Written in SystemVerilog
 * Optimized for area and power
 * 3 predefined recommended configurations
@@ -56,8 +56,10 @@ For more information on project usage, see [SCR1 User Manual](https://github.com
 SCR1 source file lists of SCR1 can be found in [./src](https://github.com/syntacore/scr1/tree/master/src):
 
 * **core.files**    - all synthesized file sources of the SCR1 core
+* **wb_top.files** - synthesized file sources of WB cluster
 * **ahb_top.files** - synthesized file sources of AHB cluster
 * **axi_top.files** - synthesized file sources of AXI cluster
+* **wb_tb.files**  - testbench file sources for WB cluster (for simulation only)
 * **ahb_tb.files**  - testbench file sources for AHB cluster (for simulation only)
 * **axi_tb.files**  - testbench file sources for AXI cluster (for simulation only)
 
@@ -148,7 +150,7 @@ In this case simulation will run on Verilator with following parameters: `CFG=MA
 Makefile supports:
 
 * choice of simulator - `run_<SIMULATOR> = <run_vcs, run_modelsim, run_ncsim, run_verilator, run_verilator_wf>`
-* selection of external interface - `BUS = <AHB, AXI>`,
+* selection of external interface - `BUS = <WB,AHB, AXI>`,
 * configuration setup - `CFG = <MAX, BASE, MIN, CUSTOM>`,
 * parameters for CUSTOM configuration - `ARCH = <IMC, IC, IM, I, EMC, EM, EC, E>, VECT_IRQ = <0, 1>, IPIC = <0, 1>, TCM = <0, 1>`
 * tests subset to run - `TARGETS = <hello, isr_sample, riscv_isa, riscv_compliance, dhrystone21, coremark>`
@@ -160,6 +162,8 @@ Examples:
     make run_verilator_wf CFG=MAX BUS=AXI TARGETS="riscv_isa riscv_compliance" TRACE=1
     make run_vcs CFG=BASE BUS=AHB TARGETS="dhrystone21 coremark" SIM_BUILD_OPTS="-gui"
     make run_modelsim CFG=CUSTOM BUS=AXI ARCH=I VECT_IRQ=1 IPIC=1 TCM=0 TARGETS=isr_sample
+    make run_verilator CFG=MAX BUS=WB TARGETS="riscv_isa hello dhrystone21 coremark riscv_compliance" TRACE=1
+    make run_verilator CFG=MAX BUS=WB TRACE=0 TARGETS="coremark"
 ```
 
 Build and run parameters can be configured in the `./Makefile`.

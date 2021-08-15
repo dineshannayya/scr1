@@ -5,7 +5,7 @@
 # PARAMETERS
 
 # CFG = <MAX, BASE, MIN, CUSTOM>
-# BUS = <AHB, AXI>
+# BUS = <AHB, AXI, WB>
 
 export CFG      ?= MAX
 export BUS      ?= AHB
@@ -135,7 +135,11 @@ ifneq (,$(findstring axi,$(BUS_lowercase)))
 export rtl_top_files := axi_top.files
 export rtl_tb_files  := axi_tb.files
 export top_module    := scr1_top_tb_axi
-else
+else ifneq (,$(findstring wb,$(BUS_lowercase)))
+export rtl_top_files := wb_top.files
+export rtl_tb_files  := wb_tb.files
+export top_module    := scr1_top_tb_wb
+else 
 export rtl_top_files := ahb_top.files
 export rtl_tb_files  := ahb_tb.files
 export top_module    := scr1_top_tb_ahb

@@ -19,6 +19,9 @@ endif
 ifeq ($(BUS),AXI)
 export scr1_wrapper  := $(root_dir)/sim/verilator_wrap/scr1_axi_wrapper.c
 endif
+ifeq ($(BUS),WB)
+export scr1_wrapper  := $(root_dir)/sim/verilator_wrap/scr1_wb_wrapper.c
+endif
 export verilator_ver ?= $(shell  expr `verilator --version | cut -f2 -d' '`)
 endif
 
