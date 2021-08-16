@@ -199,26 +199,6 @@ $(test_info): clean_hex tests
 isr_sample: | $(bld_dir)
 	$(MAKE) -C $(tst_dir)/isr_sample ARCH=$(ARCH) IPIC=$(IPIC) VECT_IRQ=$(VECT_IRQ)
 
-# Targets
-.PHONY: tests run_iverilog run_modelsim run_modelsim_wlf run_vcs run_ncsim run_verilator run_verilator_wf
-
-default: clean_test_list run_verilator
-
-clean_test_list:
-	rm -f $(test_info)
-
-echo_out: tests
-	@echo "                          Test               | build | simulation " ;
-	@echo "$$(cat $(test_results))"
-
-tests: $(TARGETS)
-
-$(test_info): clean_hex tests
-	cd $(bld_dir)
-
-isr_sample: | $(bld_dir)
-	$(MAKE) -C $(tst_dir)/isr_sample ARCH=$(ARCH) IPIC=$(IPIC) VECT_IRQ=$(VECT_IRQ)
-
 dhrystone21: | $(bld_dir)
 	$(MAKE) -C $(tst_dir)/benchmarks/dhrystone21 EXT_CFLAGS="$(EXT_CFLAGS)" ARCH=$(ARCH)
 
