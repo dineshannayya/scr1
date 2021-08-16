@@ -73,5 +73,14 @@
 26-July 2021 - Dinesh.A, Modified the 64 Bit additional logic for 2's complement is broken into 32bit addition for timing reason
 	modified:   src/core/pipeline/scr1_pipe_mul.sv
 	modified:   src/top/scr1_timer.sv
- 
+16-Aug 2021 - Dinesh A, iverilog compile support added + wishbone interface testing update done
+	modified:   Makefile
+	modified:   sim/Makefile
+	new file:   sim/iverilog_vpi/system.c
+	modified:   sim/tests/test/test.c
+	modified:   src/core/pipeline/scr1_pipe_ialu.sv
+	modified:   src/tb/scr1_memory_tb_wb.sv
+	modified:   src/tb/scr1_top_tb_runtests.sv
+	modified:   src/tb/scr1_top_tb_wb.sv
+     
 

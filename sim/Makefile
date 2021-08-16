@@ -25,20 +25,30 @@ endif
 export verilator_ver ?= $(shell  expr `verilator --version | cut -f2 -d' '`)
 endif
 
-.PHONY: build_iverilog build_modelsim build_modelsim_wlf build_vcs build_ncsim build_verilator build_verilator_wf
+.PHONY: build_iverilog build_modelsim build_modelsim_wlf build_vcs build_ncsim build_verilator build_verilator_wf build_iverilog_wf
 
 default: build_modelsim
 
 build_iverilog: $(sv_list)
 	cd $(bld_dir); \
-	iverilog \
-	+incdir+$(rtl_inc_dir) \
-	+incdir+$(rtl_inc_tb_dir) \
-	+define+SCR1_TRGT_SIMULATION \
-	+define+$(SIM_TRACE_DEF) \
-	+define+$(SIM_CFG_DEF) \
+	iverilog -g2012 \
+	-I $(rtl_inc_dir) \
+	-I $(rtl_inc_tb_dir) \
+	-D $(SIM_CFG_DEF) \
 	$(SIM_BUILD_OPTS) \
-	$(sv_list)
+	$(sv_list) \
+	-o $(top_module).vvp
+
+build_iverilog_wf: $(sv_list)
+	cd $(bld_dir); \
+	iverilog -g2012 \
+	-I $(rtl_inc_dir) \
+	-I $(rtl_inc_tb_dir) \
+	-D $(SIM_CFG_DEF) \
+	-D WFDUMP         \
+	$(SIM_BUILD_OPTS) \
+	$(sv_list) \
+	-o $(top_module).vvp
 
 build_modelsim: $(sv_list)
 	cd $(bld_dir); \

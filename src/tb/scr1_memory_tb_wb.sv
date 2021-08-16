@@ -24,8 +24,8 @@ module scr1_memory_tb_wb #(
     output  logic                                   ext_irq,
 `endif // SCR1_IPIC_EN
     output  logic                                   soft_irq,
-    input   integer                                 imem_req_ack_stall_in,
-    input   integer                                 dmem_req_ack_stall_in,
+    input   logic [SCR1_WB_WIDTH-1:0]               imem_req_ack_stall_in,
+    input   logic [SCR1_WB_WIDTH-1:0]               dmem_req_ack_stall_in,
 
     // Instruction Memory Interface
     input  logic                                    wbd_imem_stb_i,
@@ -80,6 +80,10 @@ logic [255:0]                           test_file;
 string                                  test_file;
 `endif // VERILATOR
 bit                                     test_file_init;
+
+
+assign wbd_imem_err_o = 0;
+assign wbd_dmem_err_o = 0;
 
 //-------------------------------------------------------------------------------
 // Local functions
@@ -141,26 +145,6 @@ begin
 end
 endfunction : scr1_write_mem
 
-function logic [3:0] scr1_be_form(
-    input   logic [1:0]     offset,
-    input   logic [1:0]     hsize
-);
-    logic [3:0]     tmp;
-begin
-    case (hsize)
-        SCR1_HSIZE_8B : begin
-            tmp = 4'b0001 << offset;
-        end
-        SCR1_HSIZE_16B : begin
-            tmp = 4'b0011 << offset;
-        end
-        SCR1_HSIZE_32B : begin
-            tmp = 4'b1111;
-        end
-    endcase
-    return tmp;
-end
-endfunction : scr1_be_form
 
 //-------------------------------------------------------------------------------
 // Local signal declaration

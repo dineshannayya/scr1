@@ -11,6 +11,8 @@ initial begin
     $value$plusargs("imem_pattern=%h", imem_req_ack_stall);
     $value$plusargs("dmem_pattern=%h", dmem_req_ack_stall);
 
+    $display("imem_pattern:%x",imem_req_ack_stall);
+    $display("dmem_pattern:%x",dmem_req_ack_stall);
 `ifdef SIGNATURE_OUT
     $value$plusargs("test_name=%s", s_testname);
     b_single_run_flag = 1;

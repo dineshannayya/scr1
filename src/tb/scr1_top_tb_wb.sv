@@ -356,7 +356,7 @@ scr1_memory_tb_wb #(
 initial
 begin
    $dumpfile("simx.vcd");
-   $dumpvars(0,scr1_top_tb_ahb);
+   $dumpvars(2,scr1_top_tb_wb);
 end
 `endif
 

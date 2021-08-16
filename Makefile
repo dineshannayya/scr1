@@ -274,12 +274,28 @@ run_iverilog: $(test_info)
 	$(MAKE) -C $(root_dir)/sim build_iverilog SIM_CFG_DEF=$(SIM_CFG_DEF) SIM_TRACE_DEF=$(SIM_TRACE_DEF) SIM_BUILD_OPTS=$(SIM_BUILD_OPTS); \
 	printf "" > $(test_results); \
 	cd $(bld_dir); \
-	vvp \
+        iverilog-vpi ../../sim/iverilog_vpi/system.c; \
+	vvp  -M. -msystem  $(top_module).vvp \
 	+test_info=$(test_info) \
 	+test_results=$(test_results) \
 	+imem_pattern=$(imem_pattern) \
 	+dmem_pattern=$(dmem_pattern) \
-	$(top_module).vvp  | tee $(sim_results)  ;\
+	| tee $(sim_results)  ;\
+	printf "Simulation performed on $$(vvp -V) \n" ;\
+	printf "                          Test               | build | simulation \n" ; \
+	printf "$$(cat $(test_results)) \n"
+
+run_iverilog_wf: $(test_info)
+	$(MAKE) -C $(root_dir)/sim build_iverilog_wf SIM_CFG_DEF=$(SIM_CFG_DEF) SIM_TRACE_DEF=$(SIM_TRACE_DEF) SIM_BUILD_OPTS=$(SIM_BUILD_OPTS); \
+	printf "" > $(test_results); \
+	cd $(bld_dir); \
+        iverilog-vpi ../../sim/iverilog_vpi/system.c; \
+	vvp  -M. -msystem  $(top_module).vvp \
+	+test_info=$(test_info) \
+	+test_results=$(test_results) \
+	+imem_pattern=$(imem_pattern) \
+	+dmem_pattern=$(dmem_pattern) \
+	| tee $(sim_results)  ;\
 	printf "Simulation performed on $$(vvp -V) \n" ;\
 	printf "                          Test               | build | simulation \n" ; \
 	printf "$$(cat $(test_results)) \n"
