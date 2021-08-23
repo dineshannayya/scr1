@@ -82,5 +82,10 @@
 	modified:   src/tb/scr1_memory_tb_wb.sv
 	modified:   src/tb/scr1_top_tb_runtests.sv
 	modified:   src/tb/scr1_top_tb_wb.sv
+23-Aug 2021 - Dinesh A, timer_irq connectivity bug fix
+	modified:   src/top/scr1_intf.sv
+	modified:   src/top/scr1_top_wb.sv
+
+
      
 

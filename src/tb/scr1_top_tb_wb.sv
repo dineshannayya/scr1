@@ -90,6 +90,7 @@ int unsigned                            tests_total;
 
 bit [1:0]                               rst_cnt;
 bit                                     rst_init;
+logic [15:0] riscv_dmem_req_cnt; // cnt dmem req
 
 
 `ifdef VERILATOR
@@ -218,7 +219,10 @@ always #500 rtc_clk = ~rtc_clk;     // 1 MHz
 assign rst_n = &rst_cnt;
 
 always_ff @(posedge clk) begin
-    if (rst_init)       rst_cnt <= '0;
+     if (rst_init)       begin
+	rst_cnt <= '0;
+        riscv_dmem_req_cnt <= 0;
+    end
     else if (~&rst_cnt) rst_cnt <= rst_cnt + 1'b1;
 end
 
@@ -352,13 +356,22 @@ scr1_memory_tb_wb #(
 );
 
 
+
+always @(posedge wbd_dmem_stb_o)
+begin
+    riscv_dmem_req_cnt = riscv_dmem_req_cnt+1;
+end
+
 `ifdef WFDUMP
 initial
 begin
    $dumpfile("simx.vcd");
    $dumpvars(2,scr1_top_tb_wb);
+   $dumpvars(4,scr1_top_tb_wb.i_top);
 end
 `endif
+
+
 
 endmodule : scr1_top_tb_wb
 
