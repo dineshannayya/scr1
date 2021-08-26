@@ -90,7 +90,7 @@ int unsigned                            tests_total;
 
 bit [1:0]                               rst_cnt;
 bit                                     rst_init;
-logic [15:0] riscv_dmem_req_cnt; // cnt dmem req
+logic [31:0] riscv_dmem_req_cnt; // cnt dmem req
 
 
 `ifdef VERILATOR
@@ -221,7 +221,6 @@ assign rst_n = &rst_cnt;
 always_ff @(posedge clk) begin
      if (rst_init)       begin
 	rst_cnt <= '0;
-        riscv_dmem_req_cnt <= 0;
     end
     else if (~&rst_cnt) rst_cnt <= rst_cnt + 1'b1;
 end
@@ -356,10 +355,16 @@ scr1_memory_tb_wb #(
 );
 
 
+wire  dmem_req =  i_top.core_dmem_req & i_top.core_dmem_req_ack;
 
-always @(posedge wbd_dmem_stb_o)
+
+initial riscv_dmem_req_cnt = 0;
+
+always @(posedge dmem_req)
 begin
     riscv_dmem_req_cnt = riscv_dmem_req_cnt+1;
+    if((riscv_dmem_req_cnt %200) == 0)
+        $display("STATUS: Total DMEM Req: %d",riscv_dmem_req_cnt);
 end
 
 `ifdef WFDUMP
