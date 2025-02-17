@@ -14,11 +14,11 @@ RISCV_COMPLIANCE_TESTS := $(src_dir)/../../../dependencies/riscv-compliance/
 #I IM IMC IC
 #EM EMC EC
 
-ifeq (rv32e,$(findstring rv32e,$(ARCH)))
+ifeq (rv32e_zicsr_zifencei,$(findstring rv32e_zicsr_zifencei,$(ARCH)))
     $(info >>> RV32E - no compliance tests)
 else ## ifdef SCR_BASE_RVE_EXT
-  #ifeq (rv32i,$(findstring rv32i,$(ARCH)))
-  ifeq ($(ARCH),$(filter $(ARCH),rv32i rv32im rv32imc rv32ic))
+  #ifeq (rv32i_zicsr_zifencei,$(findstring rv32i_zicsr_zifencei,$(ARCH)))
+  ifeq ($(ARCH),$(filter $(ARCH),rv32i_zicsr_zifencei rv32im_zicsr_zifencei rv32imc_zicsr_zifencei rv32ic_zicsr_zifencei))
     $(info >>> I32 TESTS)
     included_i += $(filter %.S,\
                         $(wildcard $(RISCV_COMPLIANCE_TESTS)/riscv-test-suite/rv32i/src/*))
@@ -30,20 +30,20 @@ else ## ifdef SCR_BASE_RVE_EXT
   endif
 
   #$(if or ifeq(rv32im,$(findstring rv32im,$(ARCH))), (rv32imc,$(findstring rv32imc,$(ARCH))))
-  ifeq ($(ARCH),$(filter $(ARCH), rv32im rv32imc))
+  ifeq ($(ARCH),$(filter $(ARCH), rv32im_zicsr_zifencei rv32imc_zicsr_zifencei))
     $(info >>> IM32 TESTS)
     included_im += $(filter %.S,\
                         $(wildcard $(RISCV_COMPLIANCE_TESTS)/riscv-test-suite/rv32im/src/*))
     compliance_set += $(included_im)
   endif ##
 
-  ifeq (rv32imc,$(findstring rv32imc,$(ARCH)))
+  ifeq (rv32imc_zicsr_zifencei,$(findstring rv32imc_zicsr_zifencei,$(ARCH)))
     $(info >>> IMC32 TESTS)
     included_imc += $(filter %.S,\
                         $(wildcard $(RISCV_COMPLIANCE_TESTS)/riscv-test-suite/rv32imc/src/*))
     compliance_set += $(included_imc)
-  endif ## ifeq (rv32imc,$(findstring rv32imc,$(ARCH)))
-  ifeq (rv32ic,$(findstring rv32ic,$(ARCH)))
+  endif ## ifeq (rv32imc_zicsr_zifencei,$(findstring rv32imc_zicsr_zifencei,$(ARCH)))
+  ifeq (rv32ic_zicsr_zifencei,$(findstring rv32ic_zicsr_zifencei,$(ARCH)))
   endif
 endif ##
 
@@ -114,9 +114,9 @@ $(RISCV_GCC) $(CFLAGS) -Wa,$(2) $(2) -E $$test_asm                        \
 done
 endef
 
-$(foreach SRC,$(filtered_i),$(eval $(call compile_template,$(SRC),-march=rv32i)))
-$(foreach SRC,$(filtered_im),$(eval $(call compile_template,$(SRC),-march=rv32im)))
-$(foreach SRC,$(filtered_imc),$(eval $(call compile_template,$(SRC),-march=rv32imc)))
+$(foreach SRC,$(filtered_i),$(eval $(call compile_template,$(SRC),-march=rv32i_zicsr_zifencei)))
+$(foreach SRC,$(filtered_im),$(eval $(call compile_template,$(SRC),-march=rv32im_zicsr_zifencei)))
+$(foreach SRC,$(filtered_imc),$(eval $(call compile_template,$(SRC),-march=rv32imc_zicsr_zifencei)))
 
 
 log_requested_tgt: $(bld_dir)
@@ -150,9 +150,9 @@ ref_data:
 
 cp_asm:
 	mkdir -p $(bld_dir)/compliance_asm
-	$(call preprocessing,$(included_i),-march=rv32i)
-	$(call preprocessing,$(included_im),-march=rv32im)
-	$(call preprocessing,$(included_imc),-march=rv32imc)
+	$(call preprocessing,$(included_i),-march=rv32i_zicsr_zifencei)
+	$(call preprocessing,$(included_im),-march=rv32im_zicsr_zifencei)
+	$(call preprocessing,$(included_imc),-march=rv32imc_zicsr_zifencei)
 
 
 riscv_compliance_tests_dir    := $(if $(RISCV_COMPLIANCE_TESTS), $(RISCV_COMPLIANCE_TESTS), ./undefined)

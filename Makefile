@@ -77,7 +77,7 @@ else
     endif
 endif
 
-override ARCH=$(ARCH_tmp)
+override ARCH=$(ARCH_tmp)_zicsr_zifencei
 
 # Use this parameter to enable tracelog
 TRACE ?= 0
@@ -125,7 +125,7 @@ sim_results  := $(bld_dir)/sim_results.txt
 
 todo_list    := $(bld_dir)/todo.txt
 # Environment
-export CROSS_PREFIX  ?= riscv64-unknown-elf-
+export CROSS_PREFIX  ?= riscv64-zephyr-elf-
 export RISCV_GCC     ?= $(CROSS_PREFIX)gcc
 export RISCV_OBJDUMP ?= $(CROSS_PREFIX)objdump -D
 export RISCV_OBJCOPY ?= $(CROSS_PREFIX)objcopy -O verilog
@@ -145,24 +145,36 @@ export rtl_tb_files  := ahb_tb.files
 export top_module    := scr1_top_tb_ahb
 endif
 
+#RISCV COMPLIANCE test Environment
+COREMARK_DIR   = ./dependencies/coremark
+RISCV_COMP_DIR = ./dependencies/riscv-compliance
+RISCV_TEST_DIR = ./dependencies/riscv-tests
+
+COREMARK_REPO   =  https://github.com/eembc/coremark
+RISCV_COMP_REPO =  https://github.com/riscv/riscv-compliance
+RISCV_TEST_REPO =  https://github.com/riscv/riscv-tests
+
+COREMARK_BRANCH   =  7f420b6bdbff436810ef75381059944e2b0d79e8
+RISCV_COMP_BRANCH =  d51259b2a949be3af02e776c39e135402675ac9b
+RISCV_TEST_BRANCH =  e30978a71921159aec38eeefd848fca4ed39a826
+
+
 ifneq (,$(findstring e,$(ARCH_lowercase)))
 # Tests can be compiled for RVE only if gcc version 8.0.0 or higher
     GCCVERSIONGT7 := $(shell expr `$(RISCV_GCC) -dumpfullversion | cut -f1 -d'.'` \> 7)
     ifeq "$(GCCVERSIONGT7)" "1"
-        ABI := ilp32e
+        ABI := ilp32
     endif
 endif
 
 #--
-ifeq (,$(findstring e,$(ARCH_lowercase)))
 # These tests cannot be compiled for RVE
 
-    # Comment this target if you don't want to run the riscv_isa
-    TARGETS += riscv_isa
+# Comment this target if you don't want to run the riscv_isa
+TARGETS += riscv_isa
 
-    # Comment this target if you don't want to run the riscv_compliance
-    TARGETS += riscv_compliance
-endif
+# Comment this target if you don't want to run the riscv_compliance
+TARGETS += riscv_compliance
 
 # Comment this target if you don't want to run the isr_sample
 TARGETS += isr_sample
@@ -182,7 +194,7 @@ TARGETS += test
 # Targets
 .PHONY: tests run_iverilog run_modelsim run_modelsim_wlf run_vcs run_ncsim run_verilator run_verilator_wf
 
-default: clean_test_list run_verilator
+default: clean_test_list run_modelsim
 
 clean_test_list:
 	rm -f $(test_info)
@@ -193,7 +205,7 @@ echo_out: tests
 
 tests: $(TARGETS)
 
-$(test_info): clean_hex tests
+$(test_info): clean_hex check-coremark_repo check-riscv_comp_repo check-riscv_test_repo tests
 	cd $(bld_dir)
 
 isr_sample: | $(bld_dir)
@@ -339,6 +351,28 @@ run_verilator_wf: $(test_info)
 	printf "Simulation performed on $$(verilator -version) \n" ;\
 	printf "                          Test               | build | simulation \n" ; \
 	printf "$$(cat $(test_results)) \n"
+
+check-coremark_repo:
+	@if [ ! -d "$(COREMARK_DIR)" ]; then \
+		echo "Installing Core Mark Repo.."; \
+		git clone $(COREMARK_REPO) $(COREMARK_DIR); \
+		cd $(COREMARK_DIR); git checkout $(COREMARK_BRANCH); \
+	fi
+
+check-riscv_comp_repo:
+	@if [ ! -d "$(RISCV_COMP_DIR)" ]; then \
+		echo "Installing Risc V Complance Repo.."; \
+		git clone $(RISCV_COMP_REPO) $(RISCV_COMP_DIR); \
+		cd $(RISCV_COMP_DIR); git checkout $(RISCV_COMP_BRANCH); \
+	fi
+
+check-riscv_test_repo:
+	@if [ ! -d "$(RISCV_TEST_DIR)" ]; then \
+		echo "Installing RiscV Test Repo.."; \
+		git clone $(RISCV_TEST_REPO) $(RISCV_TEST_DIR); \
+		cd $(RISCV_TEST_DIR); git checkout $(RISCV_TEST_BRANCH); \
+	fi
+
 clean:
 	$(MAKE) -C $(tst_dir)/benchmarks/dhrystone21 clean
 	$(MAKE) -C $(tst_dir)/riscv_isa clean

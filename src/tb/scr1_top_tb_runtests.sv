@@ -100,7 +100,7 @@ always_ff @(posedge clk) begin
                 test_running <= 1'b0;
                 test_pass = 1;
 
-                $sformat(tmpstr, "riscv64-unknown-elf-readelf -s %s | grep 'begin_signature\\|end_signature' | awk '{print $2}' > elfinfo", get_filename(test_file));
+                $sformat(tmpstr, "riscv64-zephyr-elf-readelf -s %s | grep 'begin_signature\\|end_signature' | awk '{print $2}' > elfinfo", get_filename(test_file));
                 fd = $fopen("script.sh", "w");
                 if (fd == 0) begin
                     $write("Can't open script.sh\n");
