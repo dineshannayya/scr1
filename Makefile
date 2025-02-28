@@ -262,6 +262,21 @@ run_modelsim: $(test_info)
 	printf "                          Test               | build | simulation \n" ; \
 	printf "$$(cat $(test_results)) \n"
 
+run_modelsim_wlf: $(test_info)
+	$(MAKE) -C $(root_dir)/sim build_modelsim_wlf SIM_CFG_DEF=$(SIM_CFG_DEF) SIM_TRACE_DEF=$(SIM_TRACE_DEF) SIM_BUILD_OPTS=$(SIM_BUILD_OPTS); \
+	printf "" > $(test_results); \
+	cd $(bld_dir); \
+	vsim -do "run -all" +nowarn3691 \
+	+test_info=$(test_info) \
+	+test_results=$(test_results) \
+	+imem_pattern=$(imem_pattern) \
+	+dmem_pattern=$(dmem_pattern) \
+	work.$(top_module) \
+	$(MODELSIM_OPTS) | tee $(sim_results)  ;\
+	printf "Simulation performed on $$(vsim -version) \n" ;\
+	printf "                          Test               | build | simulation \n" ; \
+	printf "$$(cat $(test_results)) \n"
+
 run_iverilog: $(test_info)
 	$(MAKE) -C $(root_dir)/sim build_iverilog SIM_CFG_DEF=$(SIM_CFG_DEF) SIM_TRACE_DEF=$(SIM_TRACE_DEF) SIM_BUILD_OPTS=$(SIM_BUILD_OPTS); \
 	printf "" > $(test_results); \
@@ -292,20 +307,6 @@ run_iverilog_wf: $(test_info)
 	printf "                          Test               | build | simulation \n" ; \
 	printf "$$(cat $(test_results)) \n"
 
-run_modelsim_wlf: $(test_info)
-	$(MAKE) -C $(root_dir)/sim build_modelsim_wlf SIM_CFG_DEF=$(SIM_CFG_DEF) SIM_TRACE_DEF=$(SIM_TRACE_DEF) SIM_BUILD_OPTS=$(SIM_BUILD_OPTS); \
-	printf "" > $(test_results); \
-	cd $(bld_dir); \
-	vsim -c -do "run -all" +nowarn3691 \
-	+test_info=$(test_info) \
-	+test_results=$(test_results) \
-	+imem_pattern=$(imem_pattern) \
-	+dmem_pattern=$(dmem_pattern) \
-	work.$(top_module) \
-	$(MODELSIM_OPTS) | tee $(sim_results)  ;\
-	printf "Simulation performed on $$(vsim -version) \n" ;\
-	printf "                          Test               | build | simulation \n" ; \
-	printf "$$(cat $(test_results)) \n"
 run_ncsim: $(test_info)
 	$(MAKE) -C $(root_dir)/sim build_ncsim SIM_CFG_DEF=$(SIM_CFG_DEF) SIM_TRACE_DEF=$(SIM_TRACE_DEF) SIM_BUILD_OPTS=$(SIM_BUILD_OPTS);
 	printf "" > $(test_results);

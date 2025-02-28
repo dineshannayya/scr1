@@ -68,7 +68,7 @@ build_modelsim_wlf: $(sv_list)
 	cd $(bld_dir); \
 	vlib work; \
 	vmap work work; \
-	vlog -work work -O1 -mfcu -sv \
+	vlog -work work +acc -mfcu -sv \
 	+incdir+$(rtl_inc_dir) \
 	+incdir+$(rtl_inc_tb_dir) \
 	+nowarnSVCHK  \
